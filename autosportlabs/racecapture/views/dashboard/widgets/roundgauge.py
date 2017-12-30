@@ -132,17 +132,14 @@ class RoundGauge(CustomizableGauge):
 
     def on_value(self, instance, value):
         try:
-            value = self.value
-            min = self.min
-            max = self.max
-            railedValue = value
-            if railedValue > max:
-                railedValue = max
-            if railedValue < min:
-                railedValue = min
+            min_value = self.min
+            max_value = self.max
+            railed_value = max(min_value, min(max_value, value))
 
-            range = max - min
-            offset = railedValue - min
+            range = max_value - min_value
+            range = 1 if range == 0 else range
+
+            offset = railed_value - min_value
             self.ids.gauge.value = offset * 100 / range
         except Exception as e:
             Logger.error('RoundGauge: error setting gauge value ' + str(e))

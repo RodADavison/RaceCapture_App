@@ -84,6 +84,7 @@ class RcpApi:
     level_2_retries = DEFAULT_LEVEL2_RETRIES
     msg_rx_timeout = DEFAULT_MSG_RX_TIMEOUT
     _cmd_sequence_thread = None
+    _auto_detect_worker = None
     _msg_rx_thread = None
     _auto_detect_event = Event()
     _auto_detect_busy = Event()
@@ -165,9 +166,12 @@ class RcpApi:
         # this allows the auto detect worker to fall through if needed
         self._auto_detect_event.set()
         self._enable_autodetect.set()
-        self._auto_detect_worker.join()
-        self._msg_rx_thread.join()
-        self._cmd_sequence_thread.join()
+        if self._auto_detect_worker is not None:
+            self._auto_detect_worker.join()
+        if self._msg_rx_thread is not None:
+            self._msg_rx_thread.join()
+        if self._cmd_sequence_thread is not None:
+            self._cmd_sequence_thread.join()
 
     def _start_cmd_sequence_worker(self):
         t = Thread(target=self.cmd_sequence_worker)
@@ -471,8 +475,6 @@ class RcpApi:
 
             cmdSequence = [RcpCmd('ver', self.sendGetVersion),
                            RcpCmd('capabilities', self.getCapabilities),
-                           RcpCmd('imuCfg', self.getImuCfg),
-                           RcpCmd('gpsCfg', self.getGpsCfg),
                            RcpCmd('lapCfg', self.getLapCfg),
                            RcpCmd('trackCfg', self.getTrackCfg),
                            RcpCmd('canCfg', self.getCanCfg),
@@ -480,6 +482,12 @@ class RcpApi:
                            RcpCmd('connCfg', self.getConnectivityCfg),
                            RcpCmd('trackDb', self.getTrackDb)
                            ]
+
+            if capabilities.has_gps:
+                cmdSequence.append(RcpCmd('gpsCfg', self.getGpsCfg))
+                
+            if capabilities.has_imu:
+                cmdSequence.append(RcpCmd('imuCfg', self.getImuCfg))
 
             if capabilities.has_can_channel:
                 cmdSequence.append(RcpCmd('canChanCfg', self.get_can_channels_config))
@@ -904,15 +912,21 @@ class RcpApi:
                 else:
                     devices = comms.get_available_devices()
                     last_known_device = self._settings.userPrefs.get_pref('preferences', 'last_known_device')
-                    # if there was a last known device try this one first.
+                    # if there was a last known device try it repeatedly while trying the other devices.
                     if last_known_device:
-                        Logger.info('RCPAPI: trying last known device first: {}'.format(last_known_device))
+                        Logger.info('RCPAPI: trying last known device before each other device: {}'.format(last_known_device))
                         # ensure we remove it from the existing list
                         try:
                             devices.remove(last_known_device)
                         except ValueError:
                             pass
-                        devices = [last_known_device] + devices
+
+                        # rebuild the list, with last_known_device as every second entry
+                        temp_list = devices
+                        devices = [last_known_device]
+                        for device in temp_list:
+                            devices = devices + [device, last_known_device]
+
                     Logger.debug('RCPAPI: Searching for device')
 
                 testVer = VersionConfig()

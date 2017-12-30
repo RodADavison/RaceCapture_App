@@ -108,15 +108,15 @@ class UserPrefs(EventDispatcher):
 
     prefs_file_name = 'prefs.json'
 
-    def __init__(self, data_dir, user_files_dir, save_timeout=2, **kwargs):
+    def __init__(self, data_dir, user_files_dir, save_timeout=0.2, **kwargs):
         self._prefs_dict = UserPrefs.DEFAULT_PREFS_DICT
         self.config = ConfigParser()
         self.data_dir = data_dir
         self.user_files_dir = user_files_dir
         self.prefs_file = path.join(self.data_dir, self.prefs_file_name)
-        self.load()
         self._schedule_save = Clock.create_trigger(self.save, save_timeout)
         self.register_event_type("on_pref_change")
+        self.load()
 
     def on_pref_change(self, section, option, value):
         pass
@@ -185,6 +185,7 @@ class UserPrefs(EventDispatcher):
         self.set_pref('track_detection', 'last_selected_track_id', track_id)
         self.set_pref('track_detection', 'last_selected_track_timestamp', timestamp)
         self.set_pref('track_detection', 'user_cancelled_location', user_cancelled_location)
+        self._schedule_save()
 
     @property
     def datastore_location(self):
@@ -194,6 +195,7 @@ class UserPrefs(EventDispatcher):
         '''
         Saves the current configuration
         '''
+        Logger.info('UserPrefs: Saving preferences')
         with open(self.prefs_file, 'w+') as prefs_file:
             data = self.to_json()
             prefs_file.write(data)
@@ -247,6 +249,7 @@ class UserPrefs(EventDispatcher):
 
         self.config.adddefaultsection('setup')
         self.config.setdefault('setup', 'setup_enabled', 1)
+        self._schedule_save()
 
     def load(self):
         Logger.info('UserPrefs: Data Dir is: {}'.format(self.data_dir))
@@ -280,7 +283,7 @@ class UserPrefs(EventDispatcher):
         :type string
         '''
         self.config.adddefaultsection(section)
-                
+
     def get_pref_bool(self, section, option, default=None):
         '''
         Retrieve a preferences value as a bool. 

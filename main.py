@@ -162,6 +162,19 @@ class RaceCaptureApp(App):
     def get_app_version():
         return __version__
 
+    @property
+    def user_data_dir( self ):
+        # this is a workaround for a kivy bug in which /sdcard is the hardcoded path for
+        # the user dir.  This fails on Android 7.0 systems.
+        # this function should be removed when the bug is fixed in kivy.
+        if kivy.platform == 'android':
+            from jnius import autoclass 
+            env = autoclass('android.os.Environment') 
+            data_dir = os.path.join(env.getExternalStorageDirectory().getPath(), self.name ) 
+        else:
+            data_dir = super(RaceCaptureApp, self).user_data_dir
+        return data_dir
+
     def __init__(self, **kwargs):
         super(RaceCaptureApp, self).__init__(**kwargs)
 

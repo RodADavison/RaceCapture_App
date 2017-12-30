@@ -433,6 +433,6 @@ class DataStoreTest(unittest.TestCase):
         self.assertEqual(_scrub_sql_value(' 1234ABCD'), '"1234ABCD"')
         self.assertEqual(_scrub_sql_value('1234ABCD '), '"1234ABCD"')
         self.assertEqual(
-            _scrub_sql_value('!!@@##ABCD%%1234%%**'), '"ABCD1234"')
+            _scrub_sql_value('!!@@##ABCD%%1234%%**'), '"!!@@##ABCD%%1234%%**"')
         self.assertEqual(_scrub_sql_value('ABCD_1234'), '"ABCD_1234"')
         self.assertEqual(_scrub_sql_value('ABCD 1234'), '"ABCD 1234"')

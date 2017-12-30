@@ -33,6 +33,7 @@ class SampleDataTest(unittest.TestCase):
         version_config.name = 'RCP_MK2'
         version_config.major = '3'
         version_config.serial = '123456'
+        version_config.friendlyName = 'RaceCapture/Pro MK2'
 
         self.assertTrue(version_config.is_valid)
 

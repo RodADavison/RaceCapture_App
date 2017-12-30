@@ -271,7 +271,6 @@ class AnalysisView(Screen):
             self._popup.dismiss()
 
     def on_add_session(self, instance, session):
-        Logger.info("AnalysisView: on_add_session: {}".format(session))
         self.ids.sessions_view.append_session(session)
         self.check_load_suggested_lap(session.session_id)
 

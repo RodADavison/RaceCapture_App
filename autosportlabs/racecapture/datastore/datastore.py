@@ -559,7 +559,21 @@ class DataStore(object):
             self._conn.rollback()
             raise
 
-    def insert_sample(self, sample, session_id):
+    def commit(self):
+        """
+        Commit any pending changes to the database.
+        """
+        try:
+            self._conn.commit()
+        except:  # rollback under any exception, then re-raise exception
+            self._conn.rollback()
+            raise
+
+    def insert_sample_nocommit(self, sample, session_id):
+        """
+        Insert samples which are queued to be added to the DB. 
+        A subsequent commit is required before the sample will appear in the DB.
+        """
         cursor = self._conn.cursor()
         try:
             # First, insert into the datalog table to give us a reference
@@ -580,7 +594,7 @@ class DataStore(object):
                                                                        ','.join(['?'] * (len(values))))
 
             cursor.execute(base_sql, values)
-            self._conn.commit()
+
         except:  # rollback under any exception, then re-raise exception
             self._conn.rollback()
             raise
@@ -1120,7 +1134,7 @@ class DataStore(object):
 
         c = self._conn.cursor()
         for row in c.execute('''SELECT s.session_id, d.LapCount, d.CurrentLap FROM sample s, 
-                             datapoint d WHERE s.session_id = ? AND d.sample_id = s.id LIMIT 1;''',
+                             datapoint d WHERE s.session_id = ? AND d.sample_id = s.id ORDER BY d.LapCount DESC LIMIT 1;''',
                              (session_id,)):
             return row[1] is not None and row[2] is not None
         return False

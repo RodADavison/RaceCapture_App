@@ -18,6 +18,7 @@
 # have received a copy of the GNU General Public License along with
 # this code. If not, see <http://www.gnu.org/licenses/>.
 
+from datetime import datetime
 from threading import Thread
 from kivy.clock import Clock
 from kivy.logger import Logger
@@ -40,8 +41,13 @@ class SessionRecorder(EventDispatcher):
     # displayed
     RECORDING_VIEWS = ['dash']
     SAMPLE_QUEUE_GET_TIMEOUT = 0.5
-    SAMPLE_QUEUE_MAX_SIZE = 500
+    SAMPLE_QUEUE_MAX_SIZE = 50
+    SAMPLE_QUEUE_UNCOMMITTED_INSERT_LIMIT = 37
+    SAMPLE_QUEUE_BACKLOG_LOG_THRESHOLD = 0.5
     SAMPLE_QUEUE_BACKLOG_LOG_INTERVAL = 100
+    SAMPLE_QUEUE_MIN_SEND_DELAY_MS = 4 
+    SAMPLE_QUEUE_MAX_SEND_DELAY_MS = 250
+    SAMPLE_QUEUE_SLOWING_THRESHOLD = SAMPLE_QUEUE_MAX_SIZE * SAMPLE_QUEUE_BACKLOG_LOG_THRESHOLD
 
     def __init__(self, datastore, databus, rcpapi, settings, track_manager=None, status_pump=None, stop_delay=120):
         """
@@ -55,7 +61,10 @@ class SessionRecorder(EventDispatcher):
             maxsize=SessionRecorder.SAMPLE_QUEUE_MAX_SIZE)
         self._recorder_thread = None
         self._sample_queue_full = False
+        self._sample_last_send = datetime(1,1,1)
+        self._sample_send_delay = SessionRecorder.SAMPLE_QUEUE_MIN_SEND_DELAY_MS
 
+        self._sample_accumulator = {}
         self._datastore = datastore
         self._databus = databus
         self._rcapi = rcpapi
@@ -117,6 +126,7 @@ class SessionRecorder(EventDispatcher):
                 self._create_session_name(), self._channels)
             self.dispatch('on_recording', True)
             self.recording = True
+            self._sample_accumulator = {}
 
             t = Thread(target=self._session_recorder_worker)
             t.daemon = True
@@ -214,24 +224,34 @@ class SessionRecorder(EventDispatcher):
         Logger.info('SessionRecorder: session recorder worker starting')
         try:
             # reset our sample data dict
-            sample_data = {}
-            index = 0
             qsize = 0
+            insert_counter = 0
             sample_queue = self._sample_queue
+            index = 0
             # will drain the queue before exiting thread
             while self.recording or qsize > 0:
                 try:
-                    sample = sample_queue.get(
+                    sample_data = sample_queue.get(
                         True, SessionRecorder.SAMPLE_QUEUE_GET_TIMEOUT)
-                    # Merging previous sample with new data to desparsify the
-                    # data
-                    sample_data.update(sample)
-                    self._datastore.insert_sample(
+                    self._datastore.insert_sample_nocommit(
                         sample_data, self._current_session_id)
+                    insert_counter += 1
                     qsize = sample_queue.qsize()
-                    if index % SessionRecorder.SAMPLE_QUEUE_BACKLOG_LOG_INTERVAL == 0 and qsize > 0:
-                        Logger.info(
-                            'SessionRecorder: queue backlog: {}'.format(qsize))
+                    # since the commit is slow, only do the commit once the queue empty to prevent overrunning the buffer.
+                    if (qsize == 0) or (insert_counter >= SessionRecorder.SAMPLE_QUEUE_UNCOMMITTED_INSERT_LIMIT):
+                        self._datastore.commit()
+                        insert_counter = 0
+                    
+                    if qsize > 0 and index % SessionRecorder.SAMPLE_QUEUE_BACKLOG_LOG_INTERVAL == 0:
+                        Logger.info( 'SessionRecorder: queue backlog: {}, commit backlog: {}, sample send delay: {}ms'
+				.format(qsize, insert_counter, self._sample_send_delay ))
+
+                    if insert_counter > (SessionRecorder.SAMPLE_QUEUE_UNCOMMITTED_INSERT_LIMIT*SessionRecorder.SAMPLE_QUEUE_BACKLOG_LOG_THRESHOLD):
+                        Logger.debug( 'SessionRecorder: commit backlog: {}'.format(insert_counter))
+
+                    if qsize > (SessionRecorder.SAMPLE_QUEUE_MAX_SIZE*SessionRecorder.SAMPLE_QUEUE_BACKLOG_LOG_THRESHOLD):
+                        Logger.debug( 'SessionRecorder: queue backlog: {}'.format(qsize))
+
                     index += 1
                 except Empty:
                     pass
@@ -264,6 +284,14 @@ class SessionRecorder(EventDispatcher):
         self._channels = copy.deepcopy(dict(metas))
         self._check_should_record()
 
+    def _slow_down_send_rate(self):
+            self._sample_send_delay = min( self._sample_send_delay * 1.5,
+                        SessionRecorder.SAMPLE_QUEUE_MAX_SEND_DELAY_MS )
+
+    def _speed_up_send_rate(self):
+        self._sample_send_delay = max( self._sample_send_delay - SessionRecorder.SAMPLE_QUEUE_MIN_SEND_DELAY_MS,
+                SessionRecorder.SAMPLE_QUEUE_MIN_SEND_DELAY_MS )
+
     def _on_sample(self, sample):
         """
         Sample listener for data from RC. Saves data to Datastore if a session is being recorded
@@ -272,14 +300,31 @@ class SessionRecorder(EventDispatcher):
         """
         if not self.recording:
             return
-        try:
-            self._sample_queue.put_nowait(copy.deepcopy(sample))
-            self._sample_queue_full = False
-        except Full:
-            if not self._sample_queue_full:
-                # latch to prevent the log from filling up with warnings
-                Logger.warn('SessionRecorder: dropping sample; queue full')
-            self._sample_queue_full = True
+
+        # Merging previous sample with new data to desparsify the data
+        self._sample_accumulator.update( sample )
+        qsize = self._sample_queue.qsize()
+        if qsize == 0:
+            self._speed_up_send_rate()
+
+        deltaT_ms = (datetime.utcnow() - self._sample_last_send).microseconds/1000
+        if ((deltaT_ms >= self._sample_send_delay)
+                or (qsize < SessionRecorder.SAMPLE_QUEUE_SLOWING_THRESHOLD)):
+
+            if qsize > SessionRecorder.SAMPLE_QUEUE_SLOWING_THRESHOLD:
+                self._slow_down_send_rate()
+
+            self._sample_last_send = datetime.utcnow()
+
+            try:
+                self._sample_queue.put_nowait(copy.deepcopy(self._sample_accumulator))
+                self._sample_queue_full = False
+
+            except Full:
+                if not self._sample_queue_full:
+                    # latch to prevent the log from filling up with warnings
+                    Logger.warn('SessionRecorder: dropping sample; queue full')
+                self._sample_queue_full = True
 
     def _on_rc_connected(self):
         """

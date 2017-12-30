@@ -275,6 +275,7 @@ class CustomizableGauge(ButtonBehavior, SingleChannelGauge):
         if channel:
             self.data_bus.removeChannelListener(channel, self.setValue)
         self.channel = None
+        self.settings.userPrefs.set_gauge_config(self.rcid, None)
 
     def customizeGauge(self, *args):
         self._remove_customization_bubble()

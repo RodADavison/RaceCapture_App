@@ -196,7 +196,9 @@ class ConfigView(Screen):
                                                                                     settings=self._settings,
                                                                                     track_manager=self.track_manager))
 
-        attach_node('GPS', None, lambda: GPSChannelsView())
+        if self.rc_config.capabilities.has_gps:
+            attach_node('GPS', None, lambda: GPSChannelsView())
+            
         attach_node('Race Timing', None, lambda: LapStatsView())
 
         if self.rc_config.capabilities.has_analog:
@@ -208,7 +210,8 @@ class ConfigView(Screen):
         if self.rc_config.capabilities.has_gpio:
             attach_node('Digital In/Out', None, lambda: GPIOChannelsView(channels=runtime_channels))
 
-        attach_node('Accel/Gyro', None, lambda: ImuChannelsView(rc_api=self.rc_api))
+        if self.rc_config.capabilities.has_imu:
+            attach_node('Accel/Gyro', None, lambda: ImuChannelsView(rc_api=self.rc_api))
 
         if self.rc_config.capabilities.has_pwm:
             attach_node('Pulse/Analog Out', None, lambda: AnalogPulseOutputChannelsView(channels=runtime_channels))
