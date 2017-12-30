@@ -450,10 +450,11 @@ class GpsConfig(object):
     GPS_QUALITY_2D = 1
     GPS_QUALITY_3D = 2
     GPS_QUALITY_3D_DGNSS = 3
+    DEFAULT_GPS_SAMPLE_RATE = 10
 
     def __init__(self, **kwargs):
         self.stale = False
-        self.sampleRate = 0
+        self.sampleRate = GpsConfig.DEFAULT_GPS_SAMPLE_RATE
         self.positionEnabled = False
         self.speedEnabled = False
         self.distanceEnabled = False
@@ -844,12 +845,14 @@ class CANMapping(object):
     CAN_MAPPING_TYPE_SIGN_MAGNITUDE = 3
     ID_MASK_DISABLED = 0
     CONVERSION_FILTER_DISABLED = 0
+    SUB_ID_DISABLED = -1
 
     def __init__(self, **kwargs):
         self.bit_mode = False
         self.type = CANMapping.CAN_MAPPING_TYPE_UNSIGNED
         self.can_bus = 0
         self.can_id = 0
+        self.sub_id = CANMapping.SUB_ID_DISABLED
         self.can_mask = CANMapping.ID_MASK_DISABLED
         self.endian = False
         self.offset = 0
@@ -865,6 +868,7 @@ class CANMapping(object):
             self.type = json_dict.get('type', self.type)
             self.can_bus = json_dict.get('bus', self.can_bus)
             self.can_id = json_dict.get('id', self.can_id)
+            self.sub_id = json_dict.get('subId', self.sub_id)
             self.can_mask = json_dict.get('idMask', self.can_mask)
             self.offset = json_dict.get('offset', self.offset)
             self.length = json_dict.get('len', self.length)
@@ -881,6 +885,7 @@ class CANMapping(object):
         json_dict['type'] = self.type
         json_dict['bus'] = self.can_bus
         json_dict['id'] = self.can_id
+        json_dict['subId'] = self.sub_id
         json_dict['idMask'] = self.can_mask
         json_dict['offset'] = self.offset
         json_dict['len'] = self.length
@@ -1408,7 +1413,7 @@ class Capabilities(object):
 
     MIN_BT_CONFIG_VERSION = "2.9.0"
     MIN_FLAGS_VERSION = "2.10.0"
-    LEGACY_FLAGS = ['bt', 'cell', 'usb']
+    LEGACY_FLAGS = ['bt', 'cell', 'usb', 'gps']
 
     def __init__(self):
         self.channels = ChannelCapabilities()
@@ -1417,6 +1422,14 @@ class Capabilities(object):
         self.links = LinksCapabilities()
         self.bluetooth_config = True
         self.flags = []
+
+    @property
+    def has_gps(self):
+        return 'gps' in self.flags
+
+    @property
+    def has_imu(self):
+        return self.channels.imu > 0
 
     @property
     def has_analog(self):
@@ -1498,6 +1511,8 @@ class Capabilities(object):
             # Handle flags. Encapsulate legacy firmware versions that don't support flags
             min_flags_version = StrictVersion(Capabilities.MIN_FLAGS_VERSION)
             self.links.from_flags(self.flags if rcp_version >= min_flags_version else Capabilities.LEGACY_FLAGS)
+
+            self.flags = self.flags if rcp_version >= min_flags_version else Capabilities.LEGACY_FLAGS
 
             # Handle BT version
             min_bt_config_version = StrictVersion(Capabilities.MIN_BT_CONFIG_VERSION)

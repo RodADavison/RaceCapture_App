@@ -1,4 +1,33 @@
 ==1.12.0==
+* Core: Add keyboard shortcuts for navigating app
+* Core: Improve exit button behavior on mobile
+* Core: Fix false error complaining about OpenGL 1.1 when 2.1 is actually present
+* Core: improve spacing / proportions for iOS
+* Core: Gracefully handle statusview errors when status values aren't available
+* Core: Fix runtime error: cannot release un-acquired lock
+* Dashboard: Save preferences faster when changing dashboard gauges
+* Dashboard: Save preferences if you un-set a dashboard gauge
+* Dashboard: Fix 'division by zero' error if you select a channel with no range defined (like Interval)
+* Dashboard: Improve dashboard gauge customization - allow ranges to be directly specified, improve touch response
+* Dashboard: Add real-time tire / brake temperature dashboard page
+* Dashboard: Add real-time 3D G-force / gyro dashboard page
+* Dashboard: Ensure tachometer shows alert colors for default RPM channel
+* Analysis: Improve performance of in-app session recording
+* Analysis: Gracefully handle invalid data upon export
+* Analysis: Gracefully handle corrupted data in imported datalog
+* Analysis: Fix duplicate column name error upon import, (allow case insensitive channel names)
+* Setup: Add FreedomPop APN
+* Setup: Enable 11/29 bit OBDII selection switch
+* Setup: Allow 32 bit OBDII mode values
+* Setup: UI for camera control and auto logging control
+* Setup: Rework Analog mapping editor to clarify raw / mapped / linear mode
+* Setup: Expose Analog offset value for linear scaling mode (raw * scaling + offset)
+* Setup: Expose Analog smoothing value as slider
+* Setup: Add OBDII preset
+* Setup: Add CAN mapping presets
+* Setup: Add Analog Channel presets
+* Setup: add 1.5 pulse per revolution in timer config
+* Setup: Prevent RaceTiming switches from flipping incorrectly on subsequent config reads
 
 ==1.11.0==
 * Setup: Add CAN termination control options

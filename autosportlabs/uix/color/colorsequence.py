@@ -20,7 +20,7 @@
 
 from kivy.utils import get_color_from_hex as rgb
 
-DEFAULT_COLOR_SEQUENCE = ['FFFFFF', '8A00B8', '3366FF', 'F5B800', '8AB800', 'f45b5b', 'ff0066']
+DEFAULT_COLOR_SEQUENCE = ['A0A0A0', '8A00B8', '3366FF', 'F5B800', '8AB800', 'f45b5b', 'ff0066']
 
 class ColorSequence(object):
     color_index = 0

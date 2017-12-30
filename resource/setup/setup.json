@@ -5,20 +5,33 @@
 			"title": "Welcome",
 			"complete": false
 		},
-
 		{
 			"key": "device",
 			"title": "Device",
 			"complete": false,
 			"device": null
 		},
-
 		{
 			"key": "connection",
 			"title" : "Connection",
 			"complete": false
 		},
         {
+            "key": "preset",
+            "title" : "Preset",
+            "complete": false
+        },
+        {
+            "key": "tracks",
+            "title" : "Tracks",
+            "complete": false
+        },
+        {
+            "key": "podium",
+            "title" : "Podium",
+            "complete": false
+        },        
+		{
             "key": "tour",
             "title" : "Tour",
             "complete": false
@@ -38,14 +51,7 @@
             "key": "analysis",
             "title" : "Analysis",
             "complete": false
-        },
-
-        {
-            "key": "podium",
-            "title" : "Podium",
-            "complete": false
-        },
-        
+        },        
 		{
 			"key": "finish",
 			"title": "Ready to go!",

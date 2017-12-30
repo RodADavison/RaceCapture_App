@@ -32,7 +32,7 @@ from autosportlabs.widgets.scrollcontainer import ScrollContainer
 from autosportlabs.help.helpmanager import HelpInfo
 
 GPS_CHANNELS_VIEW_KV = """
-#:kivy 1.9.1
+#:kivy 1.10.0
 #:import ColorScheme autosportlabs.racecapture.theme.color.ColorScheme
 <GPSChannelsView>:
     orientation: 'vertical'

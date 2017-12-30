@@ -30,24 +30,33 @@ from utils import kvFind, kvFindClass
 from kivy.clock import Clock
 from utils import kvFindClass
 
-COMBO_VIEW_KV = """
-<ComboView>:
-    BoxLayout:
-        orientation: 'horizontal'
-        BoxLayout:
-            size_hint_x: 0.1
+TRACTION_VIEW_KV = """
+<TractionView>:
+    AnchorLayout:
+        AnchorLayout:
+            anchor_y: 'top'
+            Label:
+                text: ''
+                size_hint_y: 0.2
+
+        AnchorLayout:
+            anchor_y: 'bottom'
+            Label:
+                text: ''
+                size_hint_y: 0.2
         ImuGauge:
             size_hint_x: 0.8
-            rcid: 'imu_gauge'
-        BoxLayout:
-            size_hint_x: 0.1
+            size_hint_y: 1.0
+            padding: (dp(40), dp(40))
+            id: imu_gauge
+            rcid: 'traction_view_imu'
 """
 
-class ComboView(DashboardScreen):
-    Builder.load_string(COMBO_VIEW_KV)
+class TractionView(DashboardScreen):
+    Builder.load_string(TRACTION_VIEW_KV)
 
     def __init__(self, databus, settings, **kwargs):
-        super(ComboView, self).__init__(**kwargs)
+        super(TractionView, self).__init__(**kwargs)
         self.register_event_type('on_tracks_updated')
         self._databus = databus
         self._settings = settings
@@ -64,9 +73,12 @@ class ComboView(DashboardScreen):
             gauge.data_bus = data_bus
         self._initialized = True
 
+        self.ids.imu_gauge.zoom = 0.5
+
     def on_tracks_updated(self, trackmanager):
         pass
 
     def on_enter(self):
         if not self._initialized:
             self.init_view()
+        super(TractionView, self).on_enter()

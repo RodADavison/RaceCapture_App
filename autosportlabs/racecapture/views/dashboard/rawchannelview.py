@@ -108,7 +108,8 @@ class RawChannelView(DashboardScreen):
     def on_enter(self):
         if not self._initialized:
             self._init_screen()
-
+        super(RawChannelView, self).on_enter()
+        
     def _init_screen(self):
         dataBus = self._databus
         dataBus.addMetaListener(self.on_meta)

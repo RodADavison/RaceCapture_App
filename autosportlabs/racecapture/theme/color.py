@@ -60,7 +60,7 @@ class ColorScheme(object):
 
     @staticmethod
     def get_dark_primary_text():
-        return get_color_from_hex("212121")
+        return get_color_from_hex("313131")
 
     @staticmethod
     def get_light_primary_text():

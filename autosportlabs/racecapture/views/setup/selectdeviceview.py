@@ -52,6 +52,19 @@ SELECT_DEVICE_VIEW_KV = """
                 AnchorLayout:
                     Image:
                         allow_stretch: True
+                        source: 'resource/setup/device_PC_MK1.png'
+                    AnchorLayout:
+                        anchor_x: 'right'
+                        padding: (dp(10), dp(10))
+                        BetterToggleButton:
+                            group: 'device'
+                            size_hint: (0.45, 0.5)
+                            text: 'PodiumConnect'
+                            on_release: root.select_device('PC_MK1')
+
+                AnchorLayout:
+                    Image:
+                        allow_stretch: True
                         source: 'resource/setup/device_RCT.png'
                     AnchorLayout:
                         anchor_x: 'right'
@@ -59,7 +72,7 @@ SELECT_DEVICE_VIEW_KV = """
                         BetterToggleButton:
                             group: 'device'
                             size_hint: (0.45, 0.5)
-                            text: 'RaceCapture'
+                            text: 'RaceCapture/Track'
                             on_release: root.select_device('RCT')
 
                 AnchorLayout:
@@ -79,7 +92,7 @@ SELECT_DEVICE_VIEW_KV = """
                 AnchorLayout:
                     Image:
                         allow_stretch: True
-                        source: 'resource/setup/device_RC_Apex.png'
+                        source: 'resource/setup/device_RCP_Apex.png'
                         nocache: True
                     AnchorLayout:
                         anchor_x: 'right'
@@ -88,7 +101,7 @@ SELECT_DEVICE_VIEW_KV = """
                             group: 'device'
                             size_hint: (0.45, 0.5)
                             text: 'RaceCapture/Apex'
-                            on_release: root.select_device('RC_Apex')
+                            on_release: root.select_device('RCP_Apex')
 
                 AnchorLayout:
                     Image:
@@ -105,7 +118,8 @@ SELECT_DEVICE_VIEW_KV = """
                             text: 'RaceCapture/Pro MK2'
                             on_release: root.select_device('RCP_MK2')
         BoxLayout:
-            size_hint_y: 0.15
+            size_hint_y: None
+            height: dp(50)
 """
 
 
@@ -118,10 +132,10 @@ class SelectDeviceView(InfoView):
     def __init__(self, **kwargs):
         super(SelectDeviceView, self).__init__(**kwargs)
         self.ids.next.disabled = True
-        self.ids.next.pulsing = False
 
     def select_device(self, device):
         self.ids.next.disabled = False
+        self.ids.next.pulsing = True
         # update our setup config with the selected device
         step = self.get_setup_step('device')
         step['device'] = device

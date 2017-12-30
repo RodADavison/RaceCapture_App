@@ -34,13 +34,12 @@ from autosportlabs.uix.button.featurebutton import FeatureButton
 from autosportlabs.widgets.separator import HLineSeparator
 
 HOMPAGE_VIEW_KV = """
-<DisabledFeatureButton>
-    tile_color: (0.3, 0.3, 0.3, 1.0)
-    
-<FeatureButton>
+<HomePageFeatureButton@FeatureButton>
     title_font: 'resource/fonts/ASL_regular.ttf'
-    icon_color: (0.0, 0.0, 0.0, 1.0)
-    title_color: (0.2, 0.2, 0.2, 1.0)
+    icon_color: [0.0, 0.0, 0.0, 1.0]
+    title_color: [0.2, 0.2, 0.2, 1.0]
+    disabled_color: [1.0, 1.0, 1.0, 1.0]
+    highlight_color: [0.7, 0.7, 0.7, 1.0]
     
 <HomePageView>:
     BoxLayout:
@@ -56,7 +55,7 @@ HOMPAGE_VIEW_KV = """
             orientation: 'vertical'
             padding: [self.height * 0.05, self.height * 0.05]
             spacing: dp(15)
-            FeatureButton:
+            HomePageFeatureButton:
                 size_hint_y: 0.5
                 icon: '\357\203\244'
                 title: 'Dashboard'
@@ -65,11 +64,11 @@ HOMPAGE_VIEW_KV = """
                 orientation: 'horizontal'
                 size_hint_y: 0.5
                 spacing: dp(15)
-                FeatureButton:
+                HomePageFeatureButton:
                     icon: '\357\202\200'
                     title: 'Analysis'
                     on_press: root.show_view('analysis')
-                FeatureButton:
+                HomePageFeatureButton:
                     icon: '\357\202\205'
                     title: 'Setup'
                     on_press: root.show_view('config')

@@ -48,9 +48,28 @@ from fieldlabel import FieldLabel
 from iconbutton import LabelIconButton
 from autosportlabs.uix.toast.kivytoast import toast
 
-Builder.load_file('autosportlabs/racecapture/views/analysis/addstreamview.kv')
-
 class AddStreamView(BoxLayout):
+    Builder.load_string("""
+<AddStreamView>:
+    orientation: 'vertical'
+    ScreenManager:
+        id: screens
+        AddStreamSelectView:
+            id: streamSelectScreen
+            name: 'stream_select'
+        CloudConnectView:
+            id: cloudConnectScreen
+            name: 'cloud'
+        WirelessConnectView:
+            id: wirelessConnectScreen
+            name: 'wireless'
+        FileConnectView:
+            id: fileConnectScreen
+            name: 'file'
+        SessionImportView:
+            id: session_import_screen
+            name: 'session'    
+    """)
     def __init__(self, settings, datastore, **kwargs):
         super(AddStreamView, self).__init__(**kwargs)
         stream_select_view = self.ids.streamSelectScreen
@@ -124,6 +143,38 @@ class AddStreamView(BoxLayout):
         pass
 
 class AddStreamSelectView(Screen):
+    Builder.load_string("""
+<AnalysisFeatureButton@FeatureButton>
+    title_font: 'resource/fonts/ASL_regular.ttf'
+    icon_color: [0.0, 0.0, 0.0, 1.0]
+    title_color: [0.2, 0.2, 0.2, 1.0]
+    disabled_color: [1.0, 1.0, 1.0, 1.0]
+    highlight_color: [0.7, 0.7, 0.7, 1.0]
+
+<AddStreamSelectView>:
+    BoxLayout:
+        orientation: 'vertical'
+        GridLayout:
+            size_hint_y: 0.8
+            padding: [self.height * 0.1, self.height * 0.15]
+            spacing: self.height * 0.1
+            rows: 1
+            cols: 3
+            AnalysisFeatureButton:
+                icon: u'\uf15b'
+                title: 'Import Log File'
+                on_press: root.select_stream('file')
+            AnalysisFeatureButton:
+                icon: u'\uf187'
+                title: 'Saved Session'
+                on_press: root.select_stream('session')
+        FieldLabel:
+            size_hint_y: 0.2
+            font_size: root.height * 0.1
+            font_name: 'resource/fonts/ASL_regular.ttf'
+            halign: 'center'
+            text: 'Select a session location'    
+    """)
     def __init__(self, **kwargs):
         super(AddStreamSelectView, self).__init__(**kwargs)
         self.register_event_type('on_select_stream')
@@ -149,12 +200,27 @@ class BaseStreamConnectView(Screen):
         pass
 
 class CloudConnectView(BaseStreamConnectView):
-    pass
+    Builder.load_string("""
+<CloudConnectView>:
+    FieldLabel:
+        text: 'Cloud connect view'    
+    """)
 
 class WirelessConnectView(BaseStreamConnectView):
-    pass
+    Builder.load_string("""
+<WirelessConnectView>:
+    FieldLabel:
+        text: 'Wireless connect view'    
+    """)
 
 class FileConnectView(BaseStreamConnectView):
+    Builder.load_string("""
+<FileConnectView>:
+    BoxLayout:
+        orientation: 'vertical'
+        LogImportWidget:
+            id: log_import    
+    """)
     def __init__(self, **kwargs):
         super(FileConnectView, self).__init__(**kwargs)
 
@@ -178,6 +244,33 @@ class FileConnectView(BaseStreamConnectView):
         self.dispatch('on_connect_stream_complete', None)
 
 class SessionImportView(BaseStreamConnectView):
+    Builder.load_string("""
+<SessionImportView>:
+    BoxLayout:
+        id: content
+        orientation: 'vertical'
+        size_hint_y: 1
+        BoxLayout:
+            ScrollContainer:
+                on_scroll_move: root.on_scroll(*args)
+                id: session_scroller
+                do_scroll_x: False
+                do_scroll_y: True
+                size_hint_y: 1
+                size_hint_x: 1
+                GridLayout:
+                    id: session_list
+                    padding: [0, dp(20)]
+                    spacing: [0, dp(10)]
+                    row_default_height: dp(30)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    cols: 1
+        IconButton:
+            size_hint_y: 0.2
+            text: "\357\200\214"
+            on_press: root.close()    
+    """)
 
     def __init__(self, **kwargs):
         super(SessionImportView, self).__init__(**kwargs)
@@ -236,7 +329,42 @@ class SessionImportView(BaseStreamConnectView):
 
 
 class SessionListItem(BoxLayout):
-
+    Builder.load_string("""
+<SessionListItem>:
+    rows: 1
+    spacing: dp(10)
+    BoxLayout:
+        orientation: 'horizontal'
+        FieldLabel:
+            text: ''
+            id: name
+            font_size: self.height * 0.6
+        FieldLabel:
+            text: ''
+            id: date
+            font_size: self.height * 0.6
+    IconButton:
+        on_press: root.add_session()
+        text: u'\uf0fe'
+        font_size: self.height
+        height: root.height
+        width: dp(50)
+        size_hint_x: None
+    IconButton:
+        on_press: root.export_session()
+        text: u'\uf045'
+        font_size: self.height
+        height: root.height
+        width: dp(50)
+        size_hint_x: None
+    IconButton:
+        on_press: root.delete_session()
+        text: u'\uf014'
+        font_size: self.height
+        height: root.height
+        width: dp(50)
+        size_hint_x: None    
+    """)
     def __init__(self, session, **kwargs):
         super(SessionListItem, self).__init__(**kwargs)
         self.session = session
@@ -272,6 +400,84 @@ class SessionListItem(BoxLayout):
 
 
 class LogImportWidget(BoxLayout):
+    Builder.load_string("""
+<LogImportWidget>:
+    size: root.size
+    BoxLayout:
+        spacing: dp(10)
+        padding: (sp(5), sp(5), sp(5), sp(5))
+        orientation: 'vertical'
+        BoxLayout:
+            orientation: 'vertical'
+            spacing: sp(5)            
+            size_hint_y: 0.85
+            
+            BoxLayout:
+                size_hint_y: 0.20
+                orientation: 'horizontal'
+                FieldLabel:
+                    text: 'Datalog Location'
+                BoxLayout:
+                    orientation: 'horizontal'
+                    spacing: sp(10)
+                    FieldLabel:
+                        size_hint_x: 0.5
+                        id: log_path
+                        multiline: False
+                        
+                    LabelIconButton:
+                        id: browse_button
+                        size_hint_x: 0.5
+                        title: 'Browse'
+                        icon_size: self.height * .9
+                        title_font_size: self.height * 0.7
+                        icon: '\357\204\225'
+                        on_press: root.select_log()
+            
+            BoxLayout:
+                size_hint_y: 0.25
+                orientation: 'horizontal'
+                FieldLabel: 
+                    text: 'Session Name'
+                FieldInput:
+                    id: session_name
+                    
+            BoxLayout:
+                size_hint_y: 0.55
+                orientation: 'vertical'
+                spacing: sp(5)
+                FieldLabel:
+                    size_hint_y: 0.1
+                    size_hint_x: 1.0
+                    text: 'Log book'
+                TextInput:
+                    id: session_notes
+                    size_hint_y: 0.9
+
+
+        AnchorLayout:
+            anchor_x: 'right'            
+            size_hint_y: 0.15
+            LabelIconButton:
+                id: import_button
+                disabled: True
+                size_hint_x: 0.2
+                title: 'Import'
+                icon_size: self.height * .9
+                title_font_size: self.height * 0.7
+                icon: u'\uf090'
+                on_press: root.load_log()
+            
+                        
+        FieldLabel:
+            size_hint_y: .05
+            halign: 'center'
+            id: current_status
+            
+        ProgressBar:
+            id: log_load_progress
+            size_hint_y: .05    
+    """)
     datastore = ObjectProperty(None)
     settings = ObjectProperty(None)
 
@@ -299,7 +505,7 @@ class LogImportWidget(BoxLayout):
             self.ids.session_name.text = base_name
             self.ids.log_path.text = base_name
             self.ids.import_button.disabled = False
-    
+
             self._log_select.dismiss()
             self.set_import_file_path(instance.path)
 

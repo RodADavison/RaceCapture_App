@@ -109,8 +109,43 @@ class StatusView(Screen):
             'init': [
                 'Not initialized',
                 'Initialized',
-                'Error initializing'
-            ]
+                'Searching',
+                'Denied',
+                'Registered'
+            ],
+                 'sig_str': [
+                 'Unknown',
+                 'Marginal',
+                 'Marginal',
+                 'Marginal',
+                 'Marginal',
+                 'Marginal',
+                 'Marginal',
+                 'Marginal',
+                 'Marginal',
+                 'Marginal',
+                 'OK',
+                 'OK',
+                 'OK',
+                 'OK',
+                 'OK',
+                 'Good',
+                 'Good',
+                 'Good',
+                 'Good',
+                 'Good',
+                 'Excellent',
+                 'Excellent',
+                 'Excellent',
+                 'Excellent',
+                 'Excellent',
+                 'Excellent',
+                 'Excellent',
+                 'Excellent',
+                 'Excellent',
+                 'Excellent',
+                 'Excellent'
+                     ]
         },
         'bt': {
             'init': [
@@ -267,7 +302,7 @@ class StatusView(Screen):
 
         init_status = self._get_enum_definition('cell', 'init', status['init'])
         imei = status['IMEI']
-        signal_strength = status['sig_str']
+        signal_strength = self._get_enum_definition('cell', 'sig_str', status['sig_str'], 'Unknown')
         number = status['number']
 
         self._add_item('Status', init_status)
@@ -370,12 +405,13 @@ class StatusView(Screen):
 
     # Generalized function for getting an enum's English
     # equivalent. If the value is not found, the enum is returned
-    def _get_enum_definition(self, section, subsection, value):
-        val = value
+    def _get_enum_definition(self, section, subsection, value, default=None):
+        val = default if default is not None else value
 
         if section in self._enum_keys and subsection in self._enum_keys[section]:
-            if len(self._enum_keys[section][subsection]) > value:
-                val = self._enum_keys[section][subsection][value]
+            enum_data = self._enum_keys[section][subsection]
+            if len(enum_data) > value:
+                val = enum_data[value]
 
         return val
 

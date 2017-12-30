@@ -1,0 +1,100 @@
+[
+    {
+        "type": "title",
+        "title": "Front Left"
+    },
+    {
+        "type": "options",
+        "title": "Tire Zones",
+        "desc": "Number of brake temperature zones",
+        "section": "heatmap_preferences",
+        "key": "tire_zones_fl",
+    	"options": ["None", "1", "2", "3", "4"]        	
+    },    
+    {
+        "type": "options",
+        "title": "Brake zones",
+        "desc": "Number of brake temperature zones",
+        "section": "heatmap_preferences",
+        "key": "brake_zones_fl",
+    	"options": ["None", "1", "2", "3", "4"]        	
+    },
+    {
+        "type": "title",
+        "title": "Front Right"
+    },
+    {
+        "type": "options",
+        "title": "Tire Zones",
+        "desc": "Number of brake temperature zones",
+        "section": "heatmap_preferences",
+        "key": "tire_zones_fr",
+    	"options": ["None", "1", "2", "3", "4"]        	
+    },    
+    {
+        "type": "options",
+        "title": "Brake zones",
+        "desc": "Number of brake temperature zones",
+        "section": "heatmap_preferences",
+        "key": "brake_zones_fr",
+    	"options": ["None", "1", "2", "3", "4"]        	
+    },
+    {
+        "type": "title",
+        "title": "Rear Left"
+    },
+    {
+        "type": "options",
+        "title": "Tire Zones",
+        "desc": "Number of brake temperature zones",
+        "section": "heatmap_preferences",
+        "key": "tire_zones_rl",
+    	"options": ["None", "1", "2", "3", "4"]        	
+    },    
+    {
+        "type": "options",
+        "title": "Brake zones",
+        "desc": "Number of brake temperature zones",
+        "section": "heatmap_preferences",
+        "key": "brake_zones_rl",
+    	"options": ["None", "1", "2", "3", "4"]        	
+    },
+    {
+        "type": "title",
+        "title": "Rear Right"
+    },
+    {
+        "type": "options",
+        "title": "Tire Zones",
+        "desc": "Number of brake temperature zones",
+        "section": "heatmap_preferences",
+        "key": "tire_zones_rr",
+    	"options": ["None", "1", "2", "3", "4"]        	
+    },    
+    {
+        "type": "options",
+        "title": "Brake zones",
+        "desc": "Number of brake temperature zones",
+        "section": "heatmap_preferences",
+        "key": "brake_zones_rr",
+    	"options": ["None", "1", "2", "3", "4"]        	
+    },
+    {
+        "type": "title",
+        "title": "Channel Settings"
+    },    
+    {
+        "type": "string",
+        "title": "Tire temperature channel prefix",
+        "desc": "Channel name prefix for tire temperatures. Each zone should start with this prefix and end with the corner code FL, FR, RL, RR and a number for the zone. Example: TireTmpFL1\r\n\r\nThe default 'TireTmp' is recommended.",
+        "section": "heatmap_preferences",
+        "key": "tire_temp_channel_prefix"
+    },
+    {
+        "type": "string",
+        "title": "Brake temperature channel prefix",
+        "desc": "Channel name prefix for brake temperatures. Each zone should start with this prefix and end with the corner code FL, FR, RL, RR and a number for the zone. Example: BrakeTmpFL1\r\n\r\nThe default 'BrakeTmp' is recommended.",
+        "section": "heatmap_preferences",
+        "key": "brake_temp_channel_prefix"
+    }
+]

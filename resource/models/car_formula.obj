@@ -1,7 +1,7 @@
 # File produced by Open Asset Import Library (http://www.assimp.sf.net)
 # (assimp v3.1.187496374)
 
-mtllib resource/models/car-formula-white.obj.mtl
+mtllib car_formula.obj.mtl
 o car
 # 860 vertex positions
 v  0.285603 0.410614 -0.976186

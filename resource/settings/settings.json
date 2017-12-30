@@ -6,7 +6,7 @@
         "section": "preferences",
         "key": "startup_screen",
         "true": "auto",
-        "options": ["Home Page", "Dashboard", "Configuration", "Analysis"]
+        "options": ["Home Page", "Dashboard", "Setup", "Analysis"]
     },
     {
         "type": "bool",

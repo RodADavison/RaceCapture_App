@@ -34,7 +34,10 @@ CONFIG_SETUP_VIEW_KV = """
 class ConfigSetupView(InfoView):
     """
     Provides information on Configuration features, and optionally configure specific options
-    """    
+    """
     Builder.load_string(CONFIG_SETUP_VIEW_KV)
     def __init__(self, **kwargs):
         super(ConfigSetupView, self).__init__(**kwargs)
+
+    def on_enter(self, *args):
+        self.ids.next.pulsing = True

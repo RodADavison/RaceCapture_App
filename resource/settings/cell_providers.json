@@ -1,5 +1,10 @@
 {
     "cellProviders": {
+        "FreedomPop (USA)": {
+            "apn_host": "fp.com.attz",
+            "apn_user": "",
+            "apn_pass": ""
+        },
         "T-Mobile (USA)": {
             "apn_host": "fast.t-mobile.com",
             "apn_user": "",

@@ -47,7 +47,7 @@ import copy
 class PIDConfigTab(CANChannelMappingTab):
     PID_MIN = 0
     PID_MAX = 0xFFFFFFFF
-    SUPPORTED_MODES = {1:'01h', 9: '09h', 34:'22h'}
+    SUPPORTED_MODES = {1:'01h', 2:'02h', 3:'03h', 4:'04h', 5:'05h', 9:'09h', 34:'22h'}
     DEFAULT_MODE = '01h'
 
     Builder.load_string("""
@@ -510,6 +510,6 @@ class OBD2ChannelsView(BaseConfigView):
         content = PresetBrowserView(self.preset_manager, 'obd2')
         content.bind(on_preset_selected=self._on_preset_selected)
         content.bind(on_preset_close=lambda *args:popup.dismiss())
-        popup = Popup(title='Import a preset configuration', content=content, size_hint=(0.5, 0.75))
+        popup = Popup(title='Import a preset configuration', content=content, size_hint=(0.7, 0.8))
         popup.bind(on_dismiss=popup_dismissed)
         popup.open()

@@ -29,14 +29,12 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.widget import Widget
 from kivy.uix.scatter import Scatter
 from kivy.app import Builder
-from kivy.metrics import sp
+from kivy.metrics import dp
 from kivy.properties import ListProperty, NumericProperty, ObjectProperty
 from kivy.graphics import Color, Line, Bezier, Rectangle
 from autosportlabs.racecapture.geo.geopoint import GeoPoint
 from autosportlabs.uix.color.colorgradient import HeatColorGradient, SimpleColorGradient
 from utils import *
-
-Builder.load_file('autosportlabs/uix/track/trackmap.kv')
 
 class Point(object):
     x = 0.0
@@ -78,7 +76,7 @@ class TrackMapView(Widget):
     alt_track_color = ListProperty([1.0, 0.0, 0.0, 0.5])
     marker_scale = NumericProperty(1.0)
 
-    MIN_PADDING = sp(1)
+    MIN_PADDING = dp(1)
     DEFAULT_TARGET_WIDTH_SCALE = 0.075
     DEFAULT_TRACK_WIDTH_SCALE = 0.01
     DEFAULT_MARKER_WIDTH_SCALE = 0.02
@@ -250,6 +248,7 @@ class TrackMapView(Widget):
         :type color list
         '''
         self._marker_points[key] = MarkerPoint(color)
+        self._draw_current_map()
 
     def remove_marker(self, key):
         '''
@@ -359,13 +358,13 @@ class TrackMapView(Widget):
         bottom = self.pos[1]
         self.canvas.clear()
 
-        heat_width_step = sp(self.HEAT_MAP_WIDTH_STEP)
+        heat_width_step = dp(self.HEAT_MAP_WIDTH_STEP)
         path_count = len(self._scaled_paths.keys())
-        heat_width = sp(self.heat_width_scale * self.height) + ((path_count - 1) * heat_width_step)
+        heat_width = dp(self.heat_width_scale * self.height) + ((path_count - 1) * heat_width_step)
 
         with self.canvas:
             Color(*self.track_color)
-            Line(points=self._scaled_map_points, width=sp(self.track_width_scale * self.height), closed=True, cap='round', joint='round')
+            Line(points=self._scaled_map_points, width=dp(self.track_width_scale * self.height), closed=True, cap='round', joint='round')
 
             color_gradient = HeatColorGradient()
 
@@ -404,14 +403,7 @@ class TrackMapView(Widget):
                 else:
                     # draw regular map trace
                     Color(*self._paths[key].color)
-                    Line(points=path_points, width=sp(self.path_width_scale * self.height), closed=True, cap='square', joint='miter')
-
-            # draw the dynamic markers
-            marker_size = (self.marker_width_scale * self.height) * self.marker_scale
-            for key, marker_point in self._marker_points.iteritems():
-                scaled_point = self._scale_point(marker_point, self.height, left, bottom)
-                Color(*marker_point.color)
-                self._marker_locations[key] = Line(circle=(scaled_point.x, scaled_point.y, marker_size), width=marker_size, closed=True)
+                    Line(points=path_points, width=dp(self.path_width_scale * self.height), closed=True, cap='square', joint='miter')
 
             target_size = (self.target_width_scale * self.height) * self.target_scale
             # draw start point
@@ -428,7 +420,6 @@ class TrackMapView(Widget):
 
             # draw the sector points
             sector_count = 0
-            sector_target_size = target_size / 3.0
             for sector_point in self.sector_points:
                 sector_count += 1
                 scaled_point = self._scale_geopoint(sector_point)
@@ -443,6 +434,15 @@ class TrackMapView(Widget):
                 trim_x = texture.size[0] * 0.1
                 trim_y = -texture.size[1] * 0.05
                 Rectangle(size=texture.size, pos=(centered_point[0] + trim_x, centered_point[1] + trim_y), texture=texture)
+                
+            # draw the dynamic markers
+            marker_size = (self.marker_width_scale * self.height) * self.marker_scale
+            for key, marker_point in self._marker_points.iteritems():
+                scaled_point = self._scale_point(marker_point, self.height, left, bottom)
+                Color(*marker_point.color)
+                self._marker_locations[key] = Line(circle=(scaled_point.x, scaled_point.y, marker_size), width=marker_size, closed=True)
+                
+            Color(1.0, 1.0, 1.0, 1.0)
 
 
 

@@ -35,6 +35,7 @@ import gzip
 import zipfile
 from autosportlabs.util.timeutil import time_to_epoch, epoch_to_time
 from kivy.logger import Logger
+from collections import OrderedDict
 
 
 class Preset(object):
@@ -72,6 +73,7 @@ class Preset(object):
         return {'id': self.mapping_id,
                 'URI': self.uri,
                 'name': self.name,
+                'notes': self.notes,
                 'created': self.created,
                 'updated': self.updated,
                 'more_info_url': self.more_info_url,
@@ -101,13 +103,13 @@ class PresetManager(object):
         self.base_dir = kwargs.get('base_dir')
 
         self.update_lock = Lock()
-        self.presets = {}
+        self.presets = OrderedDict()
 
     def get_preset_by_id(self, id):
         return self.presets.get(id)
 
     def get_presets_by_type(self, type):
-        return dict ((k, v) for k, v in self.presets.items() if v.mapping_type == type).items()
+        return OrderedDict ((k, v) for k, v in self.presets.items() if v.mapping_type == type).items()
 
     def set_presets_user_dir(self, path):
         try:
@@ -355,7 +357,7 @@ class PresetManager(object):
                     self.presets[mapping_id] = preset
             else:
                 Logger.info("PresetManager: refreshing presets")
-                venues = self.fetch_preset_list(full_response=True)
+                venues = self.fetch_preset_list(full_response=False)
 
                 preset_count = len(venues)
                 count = 0

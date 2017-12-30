@@ -19,7 +19,7 @@ source.include_exts = py,png,jpg,kv,atlas,ttf,json,svg,cfg,obj,mtl,glsl,zip,sql
 #source.exclude_exts = spec
 
 # (list) List of directory to exclude (let empty to not exclude anything)
-source.exclude_dirs = tests, bin, .git, install, build_tools
+source.exclude_dirs = tests, bin, .git, install, build_tools, demo_screenshots
 
 # (list) List of exclusions using pattern matching
 #source.exclude_patterns = license,images/*/*.jpg
@@ -33,7 +33,7 @@ version.filename = %(source.dir)s/main.py
 
 # (list) Application requirements
 # comma seperated e.g. requirements = sqlite3, kivy, pygments
-requirements = kivy==1.10.0, sqlite3, openssl, pyopenssl, backports.ssl-match-hostname, pygments, raven, pyjnius, plyer, sqlalchemy, contextlib2
+requirements = kivy==1.10.0, sqlite3, openssl, pyopenssl, backports.ssl-match-hostname, pygments, raven, pyjnius, plyer, sqlalchemy, contextlib2, https://github.com/nskrypnik/kivy3/zipball/master
 
 # (list) Garden requirements
 #garden_requirements =

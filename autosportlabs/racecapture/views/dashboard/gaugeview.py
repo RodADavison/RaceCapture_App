@@ -52,10 +52,11 @@ class GaugeView(DashboardScreen):
 
     def _find_active_gauges(self):
         return list(kvFindClass(self, Gauge))
-
+        
     def on_enter(self):
         if not self._initialized:
             self._init_view()
+        super(GaugeView, self).on_enter()            
 
     def _init_view(self):
         dataBus = self._databus
@@ -181,7 +182,6 @@ GAUGE_VIEW_8x_KV = """
             rcid: 'b3'
         RoundGauge:
             rcid: 'b4'
-
 """
 
 class GaugeView8x(GaugeView):

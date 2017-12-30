@@ -163,6 +163,19 @@ class RaceCaptureApp(App):
     def get_app_version():
         return __version__
 
+    @property
+    def user_data_dir(self):
+        # this is a workaround for a kivy bug in which /sdcard is the hardcoded path for
+        # the user dir.  This fails on Android 7.0 systems.
+        # this function should be removed when the bug is fixed in kivy.
+        if kivy.platform == 'android':
+            from jnius import autoclass
+            env = autoclass('android.os.Environment')
+            data_dir = os.path.join(env.getExternalStorageDirectory().getPath(), self.name)
+        else:
+            data_dir = super(RaceCaptureApp, self).user_data_dir
+        return data_dir
+
     def __init__(self, **kwargs):
         super(RaceCaptureApp, self).__init__(**kwargs)
 
@@ -209,9 +222,31 @@ class RaceCaptureApp(App):
     def on_pause(self):
         return True
 
-    def _on_keyboard(self, keyboard, keycode, *args):
-        if keycode == 27:
+    def _on_keyboard(self, keyboard, key, scancode, codepoint, modifier):
+        if key == 27:  # go up to home screen
             self.switchMainView('home')
+
+        if not self.screenMgr.current == 'home':
+            return
+
+        if key == 97:  # ASCII 'a'
+            self.switchMainView('analysis')
+
+        if key == 100:  # ASCII 'd'
+            self.switchMainView('dash')
+
+        if key == 115:  # ASCII 's'
+            self.switchMainView('config')
+
+        if key == 112:  # ASCII 'p'
+            self.switchMainView('preferences')
+
+        if key == 116:  # ASCII 't'
+            self.switchMainView('status')
+
+        if key == 113 and 'ctrl' in modifier:  # ctrl-q
+            self._shutdown_app()
+
 
     def processArgs(self):
         parser = argparse.ArgumentParser(description='Autosport Labs Race Capture App')
@@ -247,11 +282,11 @@ class RaceCaptureApp(App):
 
     def _init_datastore(self):
         def _init_datastore(dstore_path):
-            Logger.info('Main: initializing datastore...')
+            Logger.info('RaceCaptureApp:initializing datastore...')
             self._datastore.open_db(dstore_path)
 
         dstore_path = self.settings.userPrefs.datastore_location
-        Logger.info("Main: Datastore Path:" + str(dstore_path))
+        Logger.info("RaceCaptureApp:Datastore Path:" + str(dstore_path))
         t = Thread(target=_init_datastore, args=(dstore_path,))
         t.daemon = True
         t.start()
@@ -296,7 +331,8 @@ class RaceCaptureApp(App):
 
     def on_read_config_error(self, detail):
         self.showActivity("Error reading configuration")
-        Logger.error("Main: Error reading configuration: {}".format(str(detail)))
+        toast("Error reading configuration. Check your connection", length_long=True)
+        Logger.error("RaceCaptureApp:Error reading configuration: {}".format(str(detail)))
 
     def on_tracks_updated(self, track_manager):
         for view in self.tracks_listeners:
@@ -306,6 +342,9 @@ class RaceCaptureApp(App):
         self.dispatch('on_tracks_updated', self.track_manager)
 
     def on_main_menu_item(self, instance, value):
+        if value == 'exit':
+            self._shutdown_app()
+
         self.switchMainView(value)
 
     def on_main_menu(self, instance, *args):
@@ -326,11 +365,19 @@ class RaceCaptureApp(App):
     def on_start(self):
         pass
 
-    def on_stop(self):
+    def _stop_workers(self):
         self._status_pump.stop()
         self._data_bus_pump.stop()
         self._rc_api.shutdown_api()
         self._telemetry_connection.telemetry_enabled = False
+
+    def _shutdown_app(self):
+        Logger.info('RaceCaptureApp: Shutting down app')
+        self._stop_workers()
+        App.get_running_app().stop()
+
+    def on_stop(self):
+        self._stop_workers()
 
     def _get_main_screen(self, view_name):
         view = self.mainViews.get(view_name)
@@ -398,10 +445,14 @@ class RaceCaptureApp(App):
         return homepage_view
 
     def build_setup_view(self):
-        setup_view = SetupView(name='setup', settings=self.settings,
+        setup_view = SetupView(name='setup',
+                               track_manager=self.track_manager,
+                               preset_manager=self.preset_manager,
+                               settings=self.settings,
                                databus=self._databus,
                                base_dir=self.base_dir,
-                               rc_api=self._rc_api)
+                               rc_api=self._rc_api,
+                               rc_config=self.rc_config)
         return setup_view
 
     def init_view_builders(self):
@@ -463,9 +514,9 @@ class RaceCaptureApp(App):
         settings_to_view = {'Home Page':'home',
                             'Dashboard':'dash',
                             'Analysis': 'analysis',
-                            'Configuration': 'config' }
+                            'Setup': 'config' }
         view_pref = self.settings.userPrefs.get_pref('preferences', 'startup_screen')
-        self._show_main_view(settings_to_view[view_pref])
+        self._show_main_view(settings_to_view.get(view_pref, 'home'))
 
     def _show_startup_view(self):
         # should we show the stetup wizard?
@@ -486,7 +537,7 @@ class RaceCaptureApp(App):
         if cli_conn_type:
             conn_type = cli_conn_type
 
-        Logger.info("RacecaptureApp: initializing rc comms with, conn type: {}".format(conn_type))
+        Logger.info("RaceCaptureApp: initializing rc comms with, conn type: {}".format(conn_type))
 
         comms = comms_factory(port, conn_type)
         rc_api = self._rc_api
@@ -585,14 +636,14 @@ class RaceCaptureApp(App):
         if token == ('preferences', 'send_telemetry'):
             if value == "1":  # Boolean settings values are 1/0, not True/False
                 if self.rc_config.connectivityConfig.cellConfig.cellEnabled:
-                    alertPopup('Telemetry error', "Turn off RaceCapture's telemetry module for app to stream telemetry.")
+                    alertPopup('Telemetry error', "Disable the telemetry module before enabling app telemetry.")
                 Clock.schedule_once(lambda dt: self._enable_telemetry())
             else:
                 Clock.schedule_once(lambda dt: self._disable_telemetry())
 
         if token == ('preferences', 'conn_type'):
             # User changed their RC connection type
-            Logger.info("Racecaptureapp: RC connection type changed to {}, restarting comms".format(value))
+            Logger.info("RaceCaptureApp: RC connection type changed to {}, restarting comms".format(value))
             Clock.schedule_once(lambda dt: self._restart_comms())
 
     def _enable_telemetry(self):
@@ -630,7 +681,7 @@ if __name__ == '__main__':
     except:
         if 'sentry_client' in globals():
             ident = sentry_client.captureException()
-            Logger.error("Main: crash caught: Reference is %s" % ident)
+            Logger.error("RaceCaptureApp:crash caught: Reference is %s" % ident)
             Logger.critical(traceback.format_exc())
         else:
             raise

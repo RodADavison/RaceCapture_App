@@ -24,6 +24,11 @@ from kivy.clock import Clock
 from kivy.app import Builder
 from kivy.uix.screenmanager import Screen
 from kivy.properties import StringProperty, BooleanProperty, ObjectProperty
+from kivy.metrics import dp
+from kivy.uix.modalview import ModalView
+from fieldlabel import FieldLabel
+from autosportlabs.racecapture.views.util.alertview import okPopup
+
 
 INFO_VIEW_KV = """    
 <InfoView>:
@@ -55,9 +60,10 @@ INFO_VIEW_KV = """
                 title_font_size: self.height * 0.6
                 icon: root.next_icon
                 size_hint_x: None
-                width: dp(110)
-                size_hint_y: 0.1
-                on_release: root._on_next()
+                width: dp(130)
+                size_hint_y: None
+                height: dp(50)
+                on_release: root.select_next()
                 
 """
 
@@ -67,6 +73,8 @@ class InfoView(Screen):
     A base class for setup screens. 
     """
     setup_config = ObjectProperty()
+    preset_manager = ObjectProperty()
+
     next_text = StringProperty('Next')
     next_icon = StringProperty(u'\uf0a9')
     background_source = StringProperty()
@@ -74,6 +82,8 @@ class InfoView(Screen):
     is_last = BooleanProperty(False)
     rc_api = ObjectProperty()
     settings = ObjectProperty()
+    rc_config = ObjectProperty()
+    track_manager = ObjectProperty()
 
     Builder.load_string(INFO_VIEW_KV)
 
@@ -85,7 +95,7 @@ class InfoView(Screen):
         pass
 
     def on_pre_enter(self, *args):
-        self.ids.next.pulsing = True
+        self.ids.next.pulsing = False
 
     def on_leave(self, *args):
         self.ids.next.pulsing = False
@@ -97,7 +107,7 @@ class InfoView(Screen):
         self.next_text = 'Done' if value else 'Next'
         self.next_icon = u'\uf00c' if value else u'\uf0a9'
 
-    def _on_next(self):
+    def select_next(self):
         self.dispatch('on_next')
 
     def get_setup_step(self, key):
@@ -106,3 +116,39 @@ class InfoView(Screen):
                 if step['key'] == key:
                     return step
         return None
+
+    def info_popup(self, msg, callback):
+        def done():
+            view.dismiss()
+            Clock.schedule_once(lambda dt: callback(), 0.25)
+
+        view = ModalView(size_hint=(None, None), size=(dp(600), dp(200)))
+        msg = FieldLabel(halign='center', text=msg)
+        view.add_widget(msg)
+        view.open()
+        Clock.schedule_once(lambda dt: done(), 2.0)
+
+    def write_rcp_config(self, info_msg, callback):
+        def timeout(dt):
+            progress_view.dismiss()
+            Clock.schedule_once(lambda dt: callback(), 0.25)
+
+        def write_win(details):
+            msg.text += ' Success'
+            self.rc_config.stale = False
+            Clock.schedule_once(timeout, 1.5)
+
+        def write_fail(details):
+            progress_view.dismiss()
+            okPopup('Oops!',
+                         'We had a problem updating the device. Check the device connection and try again.\n\nError:\n\n{}'.format(details),
+                         lambda *args: None)
+
+
+        progress_view = ModalView(size_hint=(None, None), size=(dp(600), dp(200)))
+        msg = FieldLabel(text=info_msg, halign='center')
+        progress_view.add_widget(msg)
+        progress_view.open()
+
+        self.rc_api.writeRcpCfg(self.rc_config, write_win, write_fail)
+

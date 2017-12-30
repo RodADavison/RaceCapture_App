@@ -34,7 +34,10 @@ DASHBOARD_SETUP_VIEW_KV = """
 class DashboardSetupView(InfoView):
     """
     Provides information on Dashboard features, and optionally configure specific options
-    """        
+    """
     Builder.load_string(DASHBOARD_SETUP_VIEW_KV)
     def __init__(self, **kwargs):
         super(DashboardSetupView, self).__init__(**kwargs)
+
+    def on_enter(self, *args):
+        self.ids.next.pulsing = True

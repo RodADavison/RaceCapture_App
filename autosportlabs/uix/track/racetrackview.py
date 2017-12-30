@@ -24,16 +24,26 @@ from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 from kivy.uix.scatter import Scatter
+from kivy.properties import ListProperty
 from kivy.app import Builder
 from kivy.metrics import dp
 from kivy.graphics import Color, Line
 from autosportlabs.racecapture.geo.geopoint import GeoPoint
 from autosportlabs.uix.track.trackmap import TrackMapView
+from autosportlabs.racecapture.theme.color import ColorScheme
 from utils import *
 
-Builder.load_file('autosportlabs/uix/track/racetrackview.kv')
-
+RACETRACK_VIEW_KV = """
+<RaceTrackView>:
+    orientation: 'vertical'
+    TrackMapView:
+        track_color: root.track_color
+        id: trackmap
+"""
 class RaceTrackView(BoxLayout):
+    Builder.load_string(RACETRACK_VIEW_KV)
+    track_color = ListProperty(ColorScheme.get_primary())
+    
     def __init__(self, **kwargs):
         super(RaceTrackView, self).__init__(**kwargs)
 

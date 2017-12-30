@@ -389,7 +389,7 @@ class AnalogChannel(BaseChannelView):
         content = PresetBrowserView(self.preset_manager, 'analog')
         content.bind(on_preset_selected=preset_selected)
         content.bind(on_preset_close=lambda *args:popup.dismiss())
-        popup = Popup(title='Import a preset', content=content, size_hint=(0.5, 0.75))
+        popup = Popup(title='Import a preset', content=content, size_hint=(0.7, 0.8))
         popup.bind(on_dismiss=popup_dismissed)
         popup.open()
 

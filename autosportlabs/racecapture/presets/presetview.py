@@ -33,6 +33,7 @@ from kivy.properties import StringProperty, NumericProperty, ObjectProperty
 from iconbutton import IconButton
 from autosportlabs.widgets.scrollcontainer import ScrollContainer
 from autosportlabs.racecapture.views.util.alertview import alertPopup
+from autosportlabs.racecapture.theme.color import ColorScheme
 
 class PresetUpdateStatusView(BoxLayout):
     Builder.load_string("""
@@ -64,67 +65,73 @@ class PresetUpdateStatusView(BoxLayout):
     def on_message(self, message):
         self.update_msg = message
 
-class PresetItemView(BoxLayout):
+class PresetItemView(AnchorLayout):
     Builder.load_string("""
 <PresetItemView>:
     canvas.before:
         Color:
-            rgba: 0.01, 0.01, 0.01, 1
+            rgba: 0.0, 0.0, 0.0, 1
         Rectangle:
             pos: self.pos
             size: self.size             
-
-    orientation: 'vertical'
     size_hint_y: None
-    height: dp(200)
-    padding: (dp(20), dp(0))
-    spacing: dp(10)
-    FieldLabel:
-        id: title
-        size_hint_y: 0.1
+    height: dp(210)
     BoxLayout:
-        spacing: dp(10)
-        size_hint_y: 0.85
         orientation: 'horizontal'
         AnchorLayout:
             Image:
-                id: image
-            AnchorLayout:
-                anchor_y: 'bottom'
-                BoxLayout:
-                    canvas.before:
-                        Color:
-                            rgba: 0, 0, 0, 0.7
-                        Rectangle:
-                            pos: self.pos
-                            size: self.size
-                    size_hint_y: 0.3
-                    FieldLabel:
-                        halign: 'left'
-                        id: notes
+                source: root.image_path
+                allow_stretch: True
+                size_hint_y: None
+                height: dp(150)
 
         AnchorLayout:
-            size_hint_x: None
-            width: dp(120)
             anchor_x: 'center'
             anchor_y: 'center'
+            size_hint_x: None
+            width: dp(190)
             LabelIconButton:
-                size_hint_x: 1
-                size_hint_y: 0.3
+                size_hint: (None, None)
+                size: (dp(130), dp(50))
+                pos_hint: (0.5,0.5)
                 id: load_preset
                 title: 'Select'
                 icon_size: self.height * 0.7
                 title_font_size: self.height * 0.5
                 icon: u'\uf046'
                 on_press: root.select_preset()
+        Widget:
+            size_hint_x: None
+            width: dp(10)
+    AnchorLayout:
+        anchor_y: 'top'
+        FieldLabel:
+            size_hint_y: 0.1
+            text: root.name
+            font_size: dp(30)
+
+    AnchorLayout:
+        anchor_y: 'bottom'
+        BoxLayout:
+            canvas.before:
+                Color:
+                    rgba: 0, 0, 0, 0.7
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            size_hint_y: 0.3
+            FieldLabel:
+                font_size: dp(20)
+                halign: 'left'
+                text: '' if root.notes is None else root.notes
 """)
 
-    def __init__(self, preset_id, name, notes, image_path, **kwargs):
+    preset_id = NumericProperty()
+    name = StringProperty()
+    notes = StringProperty(allownone=True)
+    image_path = StringProperty()
+    def __init__(self, **kwargs):
         super(PresetItemView, self).__init__(**kwargs)
-        self.preset_id = preset_id
-        self.ids.title.text = '' if not name else name
-        self.ids.notes.text = '' if not notes else notes
-        self.ids.image.source = image_path
         self.register_event_type('on_preset_selected')
 
     def select_preset(self):
@@ -231,8 +238,7 @@ class PresetBrowserView(BoxLayout):
     def add_preset(self, preset_id, name, notes):
         preset = self.preset_manager.get_preset_by_id(preset_id)
         if preset:
-            image_path = preset.image_url
-            preset_view = PresetItemView(preset_id, name, notes, preset.local_image_path)
+            preset_view = PresetItemView(preset_id=preset_id, name=name, notes=notes, image_path=preset.local_image_path)
             preset_view.bind(on_preset_selected=self.preset_selected)
             self.ids.preset_grid.add_widget(preset_view)
 

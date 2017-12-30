@@ -45,7 +45,7 @@ from autosportlabs.racecapture.views.analysis.markerevent import MarkerEvent, So
 from autosportlabs.racecapture.views.analysis.linechart import LineChart
 from autosportlabs.racecapture.views.file.loaddialogview import LoadDialog
 from autosportlabs.racecapture.views.file.savedialogview import SaveDialog
-from autosportlabs.racecapture.views.util.alertview import alertPopup, okPopup, confirmPopup, progress_popup
+from autosportlabs.racecapture.views.util.alertview import alertPopup, confirmPopup, progress_popup
 from autosportlabs.uix.color.colorsequence import ColorSequence
 from autosportlabs.racecapture.theme.color import ColorScheme
 from autosportlabs.racecapture.settings.prefs import UserPrefs
@@ -271,7 +271,6 @@ class AnalysisView(Screen):
             self._popup.dismiss()
 
     def on_add_session(self, instance, session):
-        Logger.info("AnalysisView: on_add_session: {}".format(session))
         self.ids.sessions_view.append_session(session)
         self.check_load_suggested_lap(session.session_id)
 

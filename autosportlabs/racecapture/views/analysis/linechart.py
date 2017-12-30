@@ -34,7 +34,6 @@ import copy
 from autosportlabs.racecapture.views.util.alertview import alertPopup
 from autosportlabs.racecapture.views.analysis.analysiswidget import ChannelAnalysisWidget
 from autosportlabs.racecapture.views.analysis.markerevent import MarkerEvent
-from autosportlabs.uix.color.colorsequence import ColorSequence
 from autosportlabs.racecapture.datastore import Filter
 from autosportlabs.racecapture.views.analysis.analysisdata import ChannelData
 from autosportlabs.uix.progressspinner import ProgressSpinner

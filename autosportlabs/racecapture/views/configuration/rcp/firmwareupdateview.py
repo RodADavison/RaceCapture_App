@@ -32,7 +32,7 @@ from kivy.uix.label import Label
 from kivy.app import Builder
 from kivy import platform
 from kivy.logger import Logger
-from autosportlabs.racecapture.views.util.alertview import confirmPopup, okPopup
+from autosportlabs.racecapture.views.util.alertview import confirmPopup
 from utils import *
 from autosportlabs.racecapture.views.configuration.baseconfigview import BaseConfigView
 from autosportlabs.racecapture.views.file.loaddialogview import LoadDialog

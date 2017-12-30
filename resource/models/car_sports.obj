@@ -1,7 +1,7 @@
 # File produced by Open Asset Import Library (http://www.assimp.sf.net)
 # (assimp v3.1.187496374)
 
-mtllib resource/models/car-parsche-sport-white.mtl
+mtllib car_sports.obj.mtl
 o car
 # 730 vertex positions
 v  0.174172 0.449934 -0.995386

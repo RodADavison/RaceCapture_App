@@ -52,20 +52,141 @@ from autosportlabs.racecapture.views.file.loaddialogview import LoadDialog
 from autosportlabs.racecapture.views.file.savedialogview import SaveDialog
 from autosportlabs.racecapture.views.util.alertview import alertPopup, confirmPopup
 from autosportlabs.racecapture.config.rcpconfig import *
+from autosportlabs.uix.button.featurebutton import FeatureButton
 from autosportlabs.racecapture.theme.color import ColorScheme
 
 
 RCP_CONFIG_FILE_EXTENSION = '.rcp'
 
-CONFIG_VIEW_KV = 'autosportlabs/racecapture/views/configuration/rcp/configview.kv'
-
 class LinkedTreeViewLabel(TreeViewLabel):
+    Builder.load_string("""
+<LinkedTreeViewLabel>:    
+    font_size: dp(16)
+    font_name: 'resource/fonts/Roboto-Light.ttf'
+""")
     view = None
     view_builder = None
 
 
 class ConfigView(Screen):
-    Builder.load_file(CONFIG_VIEW_KV)
+    Builder.load_string("""
+<InfoFieldLabel@FieldLabel>:
+    color: ColorScheme.get_dark_primary_text()
+    halign: 'center'
+    font_size: min(50, sp(50))
+    shorten: False
+
+<ConfigFeatureButton@FeatureButton>:
+    tile_color: ColorScheme.get_dark_accent()
+    icon_color: ColorScheme.get_accent()
+    title_color: ColorScheme.get_accent()
+
+<ConfigView>:
+    BoxLayout:
+        orientation: 'horizontal'
+        BoxLayout:
+            size_hint_x: None
+            width: max(dp(150), 200)
+            orientation: 'vertical'
+            ScrollContainer:
+                id: scroller 
+                do_scroll_x:False
+                TreeView:
+                    height: max(self.minimum_height, scroller.height)
+                    id: menu
+                    size_hint_y: None
+                    hide_root: True
+                    indent_level: dp(0)
+                    indent_start: dp(5)
+            BoxLayout:
+                id: button_panel
+                padding: (dp(5), dp(0))           
+                size_hint_y: None
+                height: -10
+                BoxLayout:
+                    orientation: 'vertical'
+                    padding: (dp(0), dp(10))
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        size_hint_y: 0.45
+                        spacing: dp(7)
+                        LabelIconButton:
+                            id: open
+                            title: 'Open'
+                            icon_size: self.height * 0.5
+                            title_font_size: self.height * 0.35
+                            icon: '\357\204\225'
+                            on_press: root.openConfig()                                
+                        LabelIconButton:
+                            id: save
+                            title: 'Save'
+                            icon_size: self.height * 0.5
+                            title_font_size: self.height * 0.35
+                            icon: '\357\203\207'
+                            on_press: root.saveConfig()
+                    BoxLayout:
+                        size_hint_y: 0.1                        
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        size_hint_y: 0.45
+                        spacing: dp(7)                        
+                        LabelIconButton:
+                            id: read
+                            title: 'Read'
+                            icon_size: self.height * 0.5
+                            title_font_size: self.height * 0.35                 
+                            icon: '\357\202\223'
+                            on_press: root.readConfig()
+        
+                        LabelIconButton:
+                            id: write
+                            title: 'Write'
+                            icon_size: self.height * 0.5
+                            title_font_size: self.height * 0.35
+                            icon: '\357\200\231'
+                            on_press: root.writeConfig()
+                            disabled: True
+    
+        BoxLayout:
+            size_hint_x: 0.8
+            padding: [sp(10), sp(10), 0, 0]
+            id: content
+            orientation: 'vertical'
+            BoxLayout:
+                size_hint_y: 0.3
+                InfoFieldLabel:
+                    text: 'Connect your device'
+                Widget:
+                    size_hint_x: None
+                    width: max(dp(150), 200)                                        
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: 0.4
+                padding: (30, 30)
+                spacing: 30
+                ConfigFeatureButton:
+                    id: read
+                    title: 'Read'
+                    icon: '\357\202\223'
+                    on_press: root.readConfig()
+                ConfigFeatureButton:
+                    id: open
+                    title: 'Open'
+                    icon: '\357\204\225'
+                    on_press: root.openConfig()
+                Widget:
+                    size_hint_x: None
+                    width: max(dp(150), 200)                    
+            BoxLayout:
+                size_hint_y: 0.3
+                InfoFieldLabel:
+                    text: 'Or open a configuration'
+                Widget:
+                    size_hint_x: None
+                    width: max(dp(150), 200)                                        
+                
+                    
+    """)
     # file save/load
     loaded = BooleanProperty(False)
     writeStale = BooleanProperty(False)
@@ -152,6 +273,10 @@ class ConfigView(Screen):
     def on_track_manager(self, instance, value):
         self.update_tracks()
 
+    def on_enter(self):
+        if not self.loaded and self.rc_config.loaded == True:
+            self.init_screen()
+
     def on_loaded(self, instance, value):
         self.update_config_views()
         self.update_tracks()
@@ -171,10 +296,6 @@ class ConfigView(Screen):
 
     def init_screen(self):
         self.createConfigViews()
-
-    def on_enter(self):
-        if not self.loaded:
-            Clock.schedule_once(lambda dt: self.init_screen())
 
     def createConfigViews(self):
 
@@ -198,7 +319,9 @@ class ConfigView(Screen):
                                                                                     settings=self._settings,
                                                                                     track_manager=self.track_manager))
 
-        attach_node('GPS', None, lambda: GPSChannelsView())
+        if self.rc_config.capabilities.has_gps:
+            attach_node('GPS', None, lambda: GPSChannelsView())
+
         attach_node('Race Timing', None, lambda: LapStatsView())
 
         if self.rc_config.capabilities.has_analog:
@@ -210,7 +333,8 @@ class ConfigView(Screen):
         if self.rc_config.capabilities.has_gpio:
             attach_node('Digital In/Out', None, lambda: GPIOChannelsView(channels=runtime_channels))
 
-        attach_node('Accel/Gyro', None, lambda: ImuChannelsView(rc_api=self.rc_api))
+        if self.rc_config.capabilities.has_imu:
+            attach_node('Accel/Gyro', None, lambda: ImuChannelsView(rc_api=self.rc_api))
 
         if self.rc_config.capabilities.has_pwm:
             attach_node('Pulse/Analog Out', None, lambda: AnalogPulseOutputChannelsView(channels=runtime_channels))
@@ -242,6 +366,7 @@ class ConfigView(Screen):
 
         self.update_runtime_channels(runtime_channels)
         self.update_tracks()
+        self.ids.button_panel.height = max(dp(100), 150)
         self.loaded = True
 
     def show_node(self, node):

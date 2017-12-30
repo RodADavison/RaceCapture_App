@@ -1,0 +1,9 @@
+{"models":[
+{"name":"Universal Arrow", "obj":"arrow.obj", "preview":"arrow.png"},
+{"name":"Kart", "obj":"kart.obj", "preview":"kart.png"},
+{"name":"Formula Car", "obj":"car_formula.obj", "preview":"car_formula.png"},
+{"name":"Sports Car - Rear Engine", "obj":"car_sports.obj", "preview":"car_sports.png"},
+{"name":"Sports Car - Coupe", "obj":"car_sports_coupe.obj", "preview":"car_sports_coupe.png"},
+{"name":"Sports Car - GT", "obj":"car_sports_gt.obj", "preview":"car_sports_gt.png"},
+{"name":"Race Car - Group C", "obj":"car_group_c.obj", "preview":"car_group_c.png"}
+], "default_model":"car_formula.obj"}

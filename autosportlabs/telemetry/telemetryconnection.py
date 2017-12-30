@@ -442,6 +442,7 @@ class TelemetryConnection(asynchat.async_chat):
         msg = msg.encode('ascii')
 
         try:
+            Logger.debug('TelemetryConnection: msg tx: {}'.format(msg))
             self.push(msg)
         except Exception as e:
             Logger.error("TelemetryConnection: error sending message: " + str(e))
@@ -455,7 +456,7 @@ class TelemetryConnection(asynchat.async_chat):
         msg = ''.join(self.input_buffer)
         self.input_buffer = []
 
-        Logger.debug("TelemetryConnection: " + msg)
+        Logger.debug('TelemetryConnection: rx: {}'.format(msg))
         msg_object = json.loads(msg)
         self._handle_msg(msg_object)
 

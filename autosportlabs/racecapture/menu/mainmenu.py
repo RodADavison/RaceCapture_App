@@ -90,7 +90,7 @@ MAIN_MENU_KV = """
             rcid: 'exit'
             icon: '\357\200\221'
             description: 'Exit'
-            on_main_menu_item_selected: app.stop()
+            on_main_menu_item_selected: root.on_main_menu_item_selected(*args)
 """
 class MainMenu(BoxLayout):
     Builder.load_string(MAIN_MENU_KV)

@@ -24,6 +24,8 @@ from kivy.uix.behaviors import ToggleButtonBehavior
 kivy.require('1.10.0')
 from kivy.properties import NumericProperty, ObjectProperty, BooleanProperty, ListProperty
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.stacklayout import StackLayout
+from kivy.uix.anchorlayout import AnchorLayout
 from kivy.clock import Clock
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
@@ -44,8 +46,7 @@ from autosportlabs.racecapture.geo.geopoint import GeoPoint
 from iconbutton import LabelIconButton
 from autosportlabs.widgets.scrollcontainer import ScrollContainer
 from autosportlabs.racecapture.tracks.trackmanager import TrackManager, TrackMap
-
-Builder.load_file('autosportlabs/racecapture/views/tracks/tracksview.kv')
+from autosportlabs.racecapture.config.rcpconfig import Track
 
 class SearchInput(TextInput):
 
@@ -60,6 +61,14 @@ class SearchInput(TextInput):
         pass
 
 class TracksUpdateStatusView(BoxLayout):
+    Builder.load_string("""
+<TracksUpdateStatusView>:
+    orientation: 'vertical'
+    ProgressBar:
+        id: progress
+    Label:
+        id: updatemsg    
+    """)
     progressView = None
     messageView = None
     def __init__(self, **kwargs):
@@ -95,6 +104,17 @@ class BaseTrackItemView(BoxLayout):
         pass
 
 class TrackItemView(BaseTrackItemView):
+    Builder.load_string("""
+<TrackItemView>:
+    BoxLayout:
+        orientation: 'horizontal'
+        CheckBox:
+            size_hint_x: 0.10
+            on_active: root.track_select(*args)
+            id: select
+        TrackInfoView:
+            id: trackinfo    
+    """)
     def track_select(self, instance, value):
         self.dispatch('on_track_selected', value, self.track.track_id)
 
@@ -102,6 +122,19 @@ class TrackItemView(BaseTrackItemView):
         self.ids.active = selected
 
 class SingleTrackItemView(ToggleButtonBehavior, BaseTrackItemView):
+    Builder.load_string("""
+<SingleTrackItemView>:
+    group: 'track'
+    TrackInfoView:
+        canvas.before:
+            Color:
+                rgba: root.selected_color
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        id: trackinfo    
+    """)
+    
     selected_color = ListProperty(ColorScheme.get_dark_background())
 
     def on_state(self, instance, value):
@@ -110,6 +143,52 @@ class SingleTrackItemView(ToggleButtonBehavior, BaseTrackItemView):
         self.dispatch('on_track_selected', selected, self.track.track_id)
 
 class TrackInfoView(BoxLayout):
+    Builder.load_string("""
+<TrackInfoView>:
+    orientation: 'vertical'
+    spacing: dp(10)
+    canvas.before:
+        Color:
+            rgba: 0.1, 0.1, 0.1, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    FieldLabel:
+        halign: 'center'
+        font_size: dp(20)
+        size_hint_y: 0.1
+        text: ''
+        id: name
+    BoxLayout:
+        orientation: 'horizontal'
+        BoxLayout:
+            size_hint_x: 0.8
+            padding: (dp(10), dp(10))
+            spacing: dp(30)
+            orientation: 'horizontal'
+            RaceTrackView:
+                id: track
+                size_hint_x: 0.7
+        BoxLayout:
+            size_hint_x: 0.2
+            orientation: 'vertical'
+            BoxLayout:
+                size_hint_y: 0.2
+            AnchorLayout:
+                anchor_x: 'center'
+                size_hint_y: 0.4
+                Image:
+                    id: flag
+                    allow_stretch: True
+                    size_hint_x: None                   
+            FieldLabel:
+                id: length
+                valign: 'top'
+                halign: 'center'
+                size_hint_y: 0.1                
+            BoxLayout:
+                size_hint_y: 0.3    
+    """)
     track = None
     def __init__(self, **kwargs):
         super(TrackInfoView, self).__init__(**kwargs)
@@ -140,34 +219,70 @@ class TrackInfoView(BoxLayout):
             flag_image.source = 'resource/flags/blank.png'
         self.track = track
 
-class TracksView(Screen):
-    loaded = False
-    track_manager = ObjectProperty(None)
-
-    def __init__(self, **kwargs):
-        super(TracksView, self).__init__(**kwargs)
-        self.track_manager = kwargs.get('track_manager')
-        self.register_event_type('on_tracks_updated')
-
-    def init_browser(self):
-        self.ids.browser.set_trackmanager(self.track_manager)
-        self.ids.browser.init_view()
-
-    def on_track_manager(self, instance, value):
-        if value:
-            Clock.schedule_once(lambda dt: self.init_browser())
-
-    def on_enter(self):
-        if not self.loaded:
-            self.loaded = True
-
-    def on_tracks_updated(self, track_manager):
-        self.track_manager = track_manager
-
-    def check_for_update(self):
-        self.ids.browser.on_update_check()
-
 class TracksBrowser(BoxLayout):
+    Builder.load_string("""
+<TracksBrowser>:
+    orientation: 'vertical'
+    spacing: dp(5)
+    BoxLayout:
+        height: dp(30)
+        size_hint_y: None
+        padding: (dp(20), dp(2))
+        spacing: sp(10)
+        orientation: 'horizontal'
+        Label:
+            size_hint_x: 0.1
+            text: 'Search'
+        SearchInput:
+            size_hint_x: 0.50
+            id: namefilter
+            multiline: False
+        IconButton:
+            size_hint_x: 0.05
+            id: search
+            disabled: True
+            text: u'\uf002'
+            color: ColorScheme.get_accent()
+            on_press: root.on_search_track_name()
+        Label:
+            size_hint_x: 0.15
+            text: 'Region'
+        Spinner:
+            size_hint_x: 0.25
+            id: regions
+            on_text: root.on_region_selected(*args)
+                        
+    BoxLayout:
+        size_hint_y: 0.84
+        ScrollContainer:
+            on_scroll_move: root.on_scroll(*args)
+            id: scrltracks
+            do_scroll_x:False
+            do_scroll_y:True
+            GridLayout:
+                id: tracksgrid
+                padding: [dp(20), dp(20)]
+                spacing: [dp(10), dp(10)]
+                size_hint_y: None
+                cols: 1
+            
+    BoxLayout:
+        height: dp(30)
+        size_hint_y: None
+        padding: (dp(20), dp(2))
+        orientation: 'horizontal'
+        Widget:
+            size_hint_x: 0.56
+
+        LabelIconButton:
+            size_hint_x: None
+            width: dp(120)
+            id: updatecheck
+            disabled: True
+            title: 'Update'
+            icon: '\357\203\255'
+            on_press: root.on_update_check()                                
+    """)
     INITIAL_DISPLAY_LIMIT = 10
     LAZY_DISPLAY_CHUNK_COUNT = 1
     LOOK_AHEAD_TRACKS = 10
@@ -215,11 +330,6 @@ class TracksBrowser(BoxLayout):
                 self.tracks_loading = True
                 self.addNextTrack(current_index, self.current_track_ids)
             Clock.schedule_once(lambda dt: self.lazy_load_more_maybe(), 1.0)
-
-    def on_multi_select(self, instance, value):
-        if value == False:
-            selectall = self.ids.selectall_option
-            selectall.parent.remove_widget(selectall)
 
     def set_trackmanager(self, track_manager):
         self.trackManager = track_manager
@@ -367,7 +477,250 @@ class TracksBrowser(BoxLayout):
             self.selectedTrackIds.discard(trackId)
         self.dispatch('on_track_selected', self.selectedTrackIds)
 
-    def selectAll(self, instance, value):
-        if self.tracksGrid:
-            for trackView in self.tracksGrid.children:
-                trackView.setSelected(value)
+class TrackSelectView(StackLayout):
+
+    Builder.load_string("""
+<TrackSelectView>:
+    TracksBrowser:
+        id: track_browser
+""")
+
+    def __init__(self, **kwargs):
+        super(TrackSelectView, self).__init__(**kwargs)
+        current_location = kwargs.get('current_location')
+        track_manager = kwargs.get('track_manager')
+        self.selected_track = None
+        self.register_event_type('on_track_selected')
+        self.init_view(track_manager, current_location)
+
+    def init_view(self, track_manager, current_location):
+        if track_manager is None:
+            # can't init if we don't have track_manager
+            # presumably it will happen later
+            return
+        self.ids.track_browser.multi_select = False
+        self.ids.track_browser.bind(on_track_selected=self.track_selected)
+        self.ids.track_browser.set_trackmanager(track_manager)
+        self._track_manager = track_manager
+        self.ids.track_browser.current_location = current_location
+        self.ids.track_browser.init_view()
+
+    def on_track_selected(self, track):
+        pass
+
+    def track_selected(self, instance, tracks):
+        if len(tracks) > 0:
+            # Tracks are a set, we only want 1 but we don't want to modify the original
+            tracks_copy = tracks.copy()
+            track_id = tracks_copy.pop()
+            track = self._track_manager.get_track_by_id(track_id)
+            self.selected_track = track
+            self.dispatch('on_track_selected', track)
+        else:
+            self.selected_track = None
+
+class EmptyTrackDbView(BoxLayout):
+    Builder.load_string("""
+<EmptyTrackDbView>:
+    BoxLayout:
+        orientation: 'vertical'
+        pos_hint: {'center_x': .5, 'center_y': .5}
+        Widget:
+            size_hint_y: 0.5
+        FieldLabel:
+            font_size: dp(25)
+            text: 'No tracks selected'
+            halign: 'center'
+            size_hint_y: 0.1
+        Widget:
+            size_hint_y: 0.3
+        FieldLabel:
+            text: 'Press (+) to select your favorite tracks'
+            color: ColorScheme.get_dark_primary_text()
+            font_size: dp(25)
+            halign: 'center'
+            size_hint_y: 0.1
+    """)
+    def __init__(self, **kwargs):
+        super(EmptyTrackDbView, self).__init__(**kwargs)
+
+class TrackSelectionPopup(BoxLayout):
+    Builder.load_string("""
+<TrackSelectionPopup>:
+    orientation: 'vertical'
+    TracksBrowser:
+        trackHeight: dp(200)
+        id: browser
+        size_hint_y: 0.90
+    BoxLayout:
+        size_hint_y: 0.1
+        orientation: 'horizontal'
+        IconButton:
+            text: '\357\200\214'
+            color: ColorScheme.get_accent()
+            on_release: root.confirm_add_tracks()    
+    """)
+    def __init__(self, **kwargs):
+        super(TrackSelectionPopup, self).__init__(**kwargs)
+        self.register_event_type('on_tracks_selected')
+        track_manager = kwargs.get('track_manager', None)
+        track_browser = self.ids.browser
+        track_browser.set_trackmanager(track_manager)
+        track_browser.init_view()
+        self.track_browser = track_browser
+
+    def on_tracks_selected(self, selectedTrackIds):
+        pass
+
+    def confirm_add_tracks(self):
+        self.dispatch('on_tracks_selected', self.track_browser.selectedTrackIds)
+
+TRACK_DB_ITEM_VIEW_KV = """
+<TrackDbItemView>:
+    BoxLayout:
+        orientation: 'horizontal'
+        TrackInfoView:
+            size_hint_x: 0.92
+            id: trackinfo
+        AnchorLayout:
+            size_hint_x: 0.08
+            IconButton:
+                size_hint: (0.5, 0.15)
+                text: '\357\200\224'
+                on_release: root.remove_track()
+"""
+
+class TrackDbItemView(BoxLayout):
+    Builder.load_string(TRACK_DB_ITEM_VIEW_KV)
+    def __init__(self, **kwargs):
+        super(TrackDbItemView, self).__init__(**kwargs)
+        track = kwargs.get('track', None)
+        self.index = kwargs.get('index', 0)
+        self.ids.trackinfo.setTrack(track)
+        self.track = track
+        self.register_event_type('on_remove_track')
+
+    def on_remove_track(self, index):
+        pass
+
+    def remove_track(self):
+        self.dispatch('on_remove_track', self.index)
+
+class TrackCollectionScreen(AnchorLayout):
+    Builder.load_string("""
+<TrackCollectionScreen>:
+    AnchorLayout:
+        spacing: dp(10)
+        ScrollContainer:
+            canvas.before:
+                Color:
+                    rgba: 0.05, 0.05, 0.05, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            size_hint_y: 0.95
+            id: scrltracks
+            do_scroll_x:False
+            do_scroll_y:True
+            GridLayout:
+                id: tracksgrid
+                padding: [dp(10), dp(10)]
+                spacing: [dp(10), dp(10)]
+                size_hint_y: None
+                cols: 1
+    AnchorLayout:
+        anchor_y: 'bottom'
+        IconButton:
+            color: ColorScheme.get_accent()
+            size_hint: (None, None)
+            height: root.height * .15
+            text: u'\uf055'
+            on_release: root.on_add_track_db()
+            disabled: True
+            id: addtrack    
+    """)
+    track_manager = ObjectProperty(None)
+    TRACK_ITEM_MIN_HEIGHT = 200
+
+    def __init__(self, **kwargs):
+        super(TrackCollectionScreen, self).__init__(**kwargs)
+        self.track_db = None
+        self.register_event_type('on_modified')
+
+    def on_modified(self, *args):
+        pass
+
+    def on_config_updated(self, track_db):
+        self.track_db = track_db
+        self.init_tracks_list()
+
+    def on_track_manager(self, instance, value):
+        self.track_manager = value
+        self.init_tracks_list()
+
+    def on_add_track_db(self):
+
+        def on_tracks_selected(instance, selected_track_ids):
+            if self.track_db:
+                failures = False
+                for trackId in selected_track_ids:
+                    trackMap = self.track_manager.get_track_by_id(trackId)
+                    if trackMap:
+                        startFinish = trackMap.start_finish_point
+                        if startFinish and startFinish.latitude and startFinish.longitude:
+                            Logger.info("TrackConfigView:  adding track " + str(trackMap))
+                            track = Track.fromTrackMap(trackMap)
+                            self.track_db.tracks.append(track)
+                        else:
+                            failures = True
+                if failures:
+                    alertPopup('Cannot Add Tracks', 'One or more tracks could not be added due to missing start/finish points.\n\nPlease check for track map updates and try again.')
+                self.init_tracks_list()
+                popup.dismiss()
+                self.track_db.stale = True
+                self.dispatch('on_modified')
+
+        content = TrackSelectionPopup(track_manager=self.track_manager)
+        popup = Popup(title='Add Race Tracks', content=content, size_hint=(0.9, 0.9))
+        content.bind(on_tracks_selected=on_tracks_selected)
+        popup.open()
+
+    def init_tracks_list(self):
+        if self.track_manager and self.track_db:
+            matched_tracks = []
+            for track in self.track_db.tracks:
+                matched_track = self.track_manager.find_track_by_short_id(track.trackId)
+                if matched_track:
+                    matched_tracks.append(matched_track)
+
+            grid = self.ids.tracksgrid
+            grid.clear_widgets()
+            if len(matched_tracks) == 0:
+                grid.add_widget(EmptyTrackDbView())
+                grid.height = dp(self.TRACK_ITEM_MIN_HEIGHT)
+            else:
+                grid.height = dp(self.TRACK_ITEM_MIN_HEIGHT) * (len(matched_tracks) + 1)
+                index = 0
+                for track in matched_tracks:
+                    track_db_view = TrackDbItemView(track=track, index=index)
+                    track_db_view.bind(on_remove_track=self.on_remove_track)
+                    track_db_view.size_hint_y = None
+                    track_db_view.height = dp(self.TRACK_ITEM_MIN_HEIGHT)
+                    grid.add_widget(track_db_view)
+                    index += 1
+
+            self.disableView(False)
+
+    def on_remove_track(self, instance, index):
+            try:
+                del self.track_db.tracks[index]
+                self.init_tracks_list()
+                self.track_db.stale = True
+                self.dispatch('on_modified')
+
+            except Exception as detail:
+                Logger.error('AutomaticTrackConfigScreen: Error removing track from list ' + str(detail))
+
+    def disableView(self, disabled):
+        self.ids.addtrack.disabled = disabled
+

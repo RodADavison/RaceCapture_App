@@ -121,6 +121,7 @@ class LaptimeView(DashboardScreen):
     def on_enter(self):
         if not self._initialized:
             self._init_screen()
+        super(LaptimeView, self).on_enter()            
 
     def _init_screen(self):
         dataBus = self._databus

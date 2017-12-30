@@ -24,26 +24,24 @@ from kivy.uix.button import Button
 from kivy.uix.togglebutton import ToggleButton
 from kivy.app import Builder
 
-BB_KV = """
-<BetterButton>:
-    font_name: 'resource/fonts/ASL_regular.ttf'
-    font_size: self.height * 0.5 / dp(1)
-
-<BetterToggleButton>:
-    font_name: 'resource/fonts/ASL_regular.ttf'
-    font_size: self.height * 0.5 / dp(1)
-"""
-
 class BetterButton(Button):
     """An improved button class with customizations we want.
     """
-    Builder.load_string(BB_KV)
+    Builder.load_string("""
+<BetterButton>:
+    font_name: 'resource/fonts/ASL_regular.ttf'
+    font_size: self.height * 0.35
+    """)
     def __init__(self, **kwargs):
         super(BetterButton, self).__init__(**kwargs)
 
 class BetterToggleButton(ToggleButton):
     """An improved toggle button class with customizations we want.
     """
-    Builder.load_string(BB_KV)
+    Builder.load_string("""
+<BetterToggleButton>:
+    font_name: 'resource/fonts/ASL_regular.ttf'
+    font_size: self.height * 0.35     
+    """)
     def __init__(self, **kwargs):
         super(BetterToggleButton, self).__init__(**kwargs)

@@ -272,29 +272,43 @@ class TrackManager(object):
         for track_id in track_ids:
             track_name = self.tracks[track_id].name
             if string.lower(name.strip()) in string.lower(track_name.strip()):
-                filtered_track_ids.append(track_id)
+                filtered_track_ids.append((track_name,track_id))
 
-        return filtered_track_ids
+        return self._sort_track_tuples(filtered_track_ids)
 
     def filter_tracks_by_region(self, region_name):
         track_ids_in_region = self.track_ids_in_region
         del track_ids_in_region[:]
 
+        track_ids = self.track_ids
+        filtered_track_ids = []
         if region_name is None:
-            track_ids_in_region.extend(self.track_ids)
+            track_ids_in_region.extend(self._sorted_track_ids(track_ids))
         else:
             for region in self.regions:
                 if region.name == region_name:
                     if len(region.points) > 0:
-                        for track_id in self.track_ids:
+                        for track_id in track_ids:
                             track = self.tracks[track_id]
                             if region.withinRegion(track.centerpoint):
-                                track_ids_in_region.append(track_id)
+                                filtered_track_ids.append((track.name, track_id))
                     else:
-                        track_ids_in_region.extend(self.track_ids)
+                        track_ids_in_region.extend(self._sorted_track_ids(track_ids))
                     break
+        track_ids_in_region.extend(self._sort_track_tuples(filtered_track_ids))
         return track_ids_in_region
 
+    def _sort_track_tuples(self, track_tuples):
+        # each tuple is (track_name, track_id)
+        s = sorted(track_tuples, key=lambda t: t[0])
+        ids = [t[1] for t in s]
+        return ids 
+ 
+    def _sorted_track_ids(self, track_ids):
+        tracks = self.tracks
+        sorted_ids = [(tracks[id].name, id) for id in track_ids]
+        return self._sort_track_tuples(sorted_ids)
+            
     def get_track_by_id(self, track_id):
         return self.tracks.get(track_id)
 

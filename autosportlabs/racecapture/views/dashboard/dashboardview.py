@@ -48,6 +48,15 @@ from autosportlabs.racecapture.views.util.alertview import editor_popup
 from autosportlabs.racecapture.config.rcpconfig import Track, TrackConfig, Capabilities, GpsConfig, GpsSample
 from autosportlabs.racecapture.tracks.trackmanager import TrackMap, TrackManager
 
+# Dashboard screens
+from autosportlabs.racecapture.views.dashboard.gaugeview import *
+from autosportlabs.racecapture.views.dashboard.tachometerview import TachometerView
+from autosportlabs.racecapture.views.dashboard.laptimeview import LaptimeView
+from autosportlabs.racecapture.views.dashboard.rawchannelview import RawChannelView
+from autosportlabs.racecapture.views.dashboard.tractionview import TractionView
+from autosportlabs.racecapture.views.dashboard.heatmapview import HeatmapView
+
+
 from autosportlabs.racecapture.geo.geopoint import GeoPoint
 from autosportlabs.widgets.scrollcontainer import ScrollContainer
 from autosportlabs.help.helpmanager import HelpInfo
@@ -71,11 +80,13 @@ class DashboardFactory(object):
     Screens are instances of DashboardScreen
     Screens are referenced and managed by their key name. 
     """
-    def __init__(self, databus, settings, **kwargs):
+    def __init__(self, databus, settings, track_manager, status_pump, **kwargs):
         self._view_builders = OrderedDict()
         self._view_previews = OrderedDict()
         self._databus = databus
         self._settings = settings
+        self._track_manager = track_manager
+        self._status_pump = status_pump
         self._init_factory()
 
     def create_screen(self, key):
@@ -101,6 +112,8 @@ class DashboardFactory(object):
         self._add_screen('laptime_view', self.build_laptime_view, 'Predictive Timer', 'laptime_view.png')
         self._add_screen('tach_view', self.build_tachometer_view, 'Tachometer', 'tachometer_view.png')
         self._add_screen('rawchannel_view', self.build_raw_channel_view, 'Raw Channels', 'raw_channel_view.png')
+        self._add_screen('traction_view', self.build_traction_view, 'Traction', 'traction_view.png')
+        self._add_screen('heatmap_view', self.build_heatmap_view, 'Heatmap', 'heatmap_view.png')
 
     @property
     def available_dashboards(self):
@@ -140,8 +153,14 @@ class DashboardFactory(object):
     def build_raw_channel_view(self):
         return RawChannelView(name='rawchannel_view', databus=self._databus, settings=self._settings)
 
-    def build_combo_view(self):
-        return ComboView(name='comboView', databus=self._databus, settings=self._settings)
+    def build_traction_view(self):
+        return TractionView(name='traction_view', databus=self._databus, settings=self._settings)
+
+    def build_heatmap_view(self):
+        return HeatmapView(name='heatmap_view', databus=self._databus,
+                           settings=self._settings,
+                           track_manager=self._track_manager,
+                           status_pump=self._status_pump)
 
 
 DASHBOARD_VIEW_KV = """
@@ -207,7 +226,7 @@ class DashboardView(Screen):
     def __init__(self, status_pump, track_manager, rc_api, rc_config, databus, settings, **kwargs):
         self._initialized = False
         super(DashboardView, self).__init__(**kwargs)
-        self._dashboard_factory = DashboardFactory(databus, settings)
+        self._dashboard_factory = DashboardFactory(databus, settings, track_manager, status_pump)
         self.register_event_type('on_tracks_updated')
         self.register_event_type('on_config_updated')
         self.register_event_type('on_config_written')
@@ -527,10 +546,17 @@ class DashboardView(Screen):
         for listener in listeners:
             listener.user_preferences_updated(self._settings.userPrefs)
 
+    def _exit_screen(self):
+        slide_screen = self.ids.carousel.current_slide
+        if (slide_screen.children) > 0:
+            slide_screen.children[0].on_exit()
+
     def on_nav_left(self):
+        self._exit_screen()
         self.ids.carousel.load_previous()
 
     def on_nav_right(self):
+        self._exit_screen()
         self.ids.carousel.load_next()
 
     def _check_load_screen(self, slide_screen):

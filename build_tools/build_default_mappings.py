@@ -24,7 +24,7 @@ import json
 import zipfile
 import StringIO
 import os
-import requests
+import urllib2
 from autosportlabs.racecapture.presets.presetmanager import PresetManager
 
 headers = {'User-Agent': 'ASL mapping builder'}
@@ -40,12 +40,17 @@ with zipfile.ZipFile(mf, mode='w', compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr('{}.json'.format(preset_id), preset_json_string)
         image_url = preset.image_url
         if image_url:
+
             extension = None
             extension = '.jpg' if '.jpg' in image_url else extension
             extension = '.png' if '.png' in image_url else extension
-            r = requests.get(image_url, allow_redirects=True, headers=headers)
-            image_file = '{}{}'.format(preset_id, extension)
-            open(image_file, 'wb').write(r.content)
+
+            request = urllib2.Request(image_url, headers={'User-Agent': 'ASL mapping builder'})
+            response = urllib2.urlopen(request, timeout=PresetManager.PRESET_DOWNLOAD_TIMEOUT)
+            data = response.read()
+
+            image_file = '{}{}'.format(preset.mapping_id, extension)
+            open(image_file, 'wb').write(data)
             zf.write(image_file)
             os.remove(image_file)
 

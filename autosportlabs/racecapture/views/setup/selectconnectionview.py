@@ -104,7 +104,7 @@ class SelectConnectionView(InfoView):
     Builder.load_string(SELECT_CONNECTION_VIEW_KV)
     CONNECTION_CHECK_INTERVAL = 0.5
 
-    CONNECTION_NOTES = {'USB':'Plug your RaceCapture into USB',
+    CONNECTION_NOTES = {'USB':'Plug your system into USB',
                         'WiFi':'Ensure your handheld is already connected to the RaceCapture WiFi network',
                         'Bluetooth': 'Ensure your handheld is paired with the RaceCapture Bluetooth'}
 
@@ -136,7 +136,7 @@ class SelectConnectionView(InfoView):
         if not self.rc_api.is_wireless_connection:
             supported_connections.append('USB')
         else:
-            if is_android() and (device == 'RCP_MK2' or device == 'RCP_MK3' or device == 'RC_Apex'):
+            if is_android() and (device in ['RCP_MK2', 'RCP_MK3', 'RCP_Apex']):
                 supported_connections.append('Bluetooth')
             supported_connections.append('WiFi')
 
@@ -202,6 +202,7 @@ class SelectConnectionView(InfoView):
             self.ids.progress_spinner.stop_spinning()
             self.ids.connection_status.text = u'\uf00c'
             self.ids.next.disabled = False
+            self.ids.next.pulsing = True
             connected_version = self.rc_api.connected_version
             device = None if connected_version is None else connected_version.name
             self._update_device_image(device=device)

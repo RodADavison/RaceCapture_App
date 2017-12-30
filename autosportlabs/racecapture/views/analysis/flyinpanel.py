@@ -114,7 +114,7 @@ class FlyinPanel(FloatLayout):
 
     def schedule_hide(self):
         # do not dismiss before the minimum open time. prevents false triggers
-        if self._shown_at and FlyinPanel.MINIMUM_OPEN_TIME + self._shown_at > datetime.datetime.now():
+        if self._shown_at is not None and FlyinPanel.MINIMUM_OPEN_TIME + self._shown_at > datetime.datetime.now():
             return
         self.hide_decay()
 
