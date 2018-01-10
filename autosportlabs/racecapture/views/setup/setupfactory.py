@@ -28,6 +28,7 @@ from autosportlabs.racecapture.views.setup.analysissetupview import AnalysisSetu
 from autosportlabs.racecapture.views.setup.configsetupview import ConfigSetupView
 from autosportlabs.racecapture.views.setup.tourview import TourView
 from autosportlabs.racecapture.views.setup.podiumview import PodiumSetupView
+from autosportlabs.racecapture.views.setup.cellserviceview import CellServiceView
 
 __all__ = 'setup_factory'
 
@@ -56,4 +57,6 @@ def setup_factory(key):
         return FinishSetupView()
     elif key == 'podium':
         return PodiumSetupView()
+    elif key == 'cellservice':
+        return CellServiceView()
     return None

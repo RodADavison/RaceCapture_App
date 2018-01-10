@@ -29,6 +29,11 @@ if [ $# -eq 0 ] ; then
         fi
 fi
 
+cd ../..
+python -m build_tools.build_default_tracks
+python -m build_tools.build_default_mappings
+cd -
+
 rm -rf dist build racecapture_linux_*.tar.bz2
 
 pyinstaller --clean -y racecapture_linux.spec

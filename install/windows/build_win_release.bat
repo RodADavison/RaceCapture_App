@@ -2,9 +2,10 @@ rem @echo off
 if %1.==. goto nover
 del dist /f/s/q
 del build /f/s/q
-cd ..
+cd ../..
 python -m build_tools.build_default_tracks
-cd install
+python -m build_tools.build_default_mappings
+cd install/windows
 rem Add the version string to the actual binary
 set str=%1
 set str=%str:.=,%

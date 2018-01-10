@@ -25,6 +25,7 @@ rm RaceCapture*.dmg
 #Update latest tracks
 cd ../.. 
 kivy -m build_tools.build_default_tracks
+kivy -m build_tools.build_default_mappings
 cd -
 
 DIR=$( cd ../.. && pwd )

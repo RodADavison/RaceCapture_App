@@ -24,13 +24,20 @@
         {
             "key": "tracks",
             "title" : "Tracks",
-            "complete": false
+            "complete": false,
+            "requiresFlag": "tracks"
         },
         {
             "key": "podium",
             "title" : "Podium",
             "complete": false
-        },        
+        }, 
+        {
+            "key": "cellservice",
+            "title" : "Cell Service",
+            "complete": false,
+            "requiresFlag": "cell"
+        }, 
 		{
             "key": "tour",
             "title" : "Tour",

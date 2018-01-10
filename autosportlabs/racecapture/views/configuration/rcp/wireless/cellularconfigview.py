@@ -23,10 +23,190 @@ kivy.require('1.10.0')
 from kivy.app import Builder
 from kivy.uix.gridlayout import GridLayout
 from kivy.logger import Logger
+from kivy.properties import StringProperty, ObjectProperty
 import os
 import json
 from utils import *
 from settingsview import SettingsSwitch, SettingsMappedSpinner
+from kivy.uix.boxlayout import BoxLayout
+
+class CellSettingsView(BoxLayout):
+    Builder.load_string("""
+<CellSettingsView>:
+    orientation: 'vertical'
+    SettingsView:
+        id: cell_enable
+        label_text: 'Enable on-board cellular'
+        help_text: ''
+        size_hint_y: 0.2
+    SettingsView:
+        id: cell_provider
+        label_text: 'Cellular provider'
+        help_text: 'Select the cellular provider, or specify custom APN'
+        size_hint_y: 0.3
+    ScreenManager:
+        size_hint_y: 0.5
+        id: custom_apn_screen
+        Screen:
+            name: 'blank'
+            Widget:            
+        Screen:
+            name: 'custom'
+            BoxLayout:
+                orientation: 'vertical'
+                GridLayout:            
+                    padding: (0, dp(5))
+                    cols: 2
+                    FieldLabel:
+                        text: 'APN Host'
+                        halign: 'right'
+                        padding: (dp(5),0)                                            
+                    ValueField:
+                        id: apn_host
+                        on_text: root.on_apn_host(*args)
+                GridLayout:
+                    padding: (0, dp(5))
+                    cols: 2
+                    FieldLabel:
+                        halign: 'right'
+                        text: 'APN User Name'
+                        padding: (dp(5),0)                                            
+                    ValueField:
+                        id: apn_user
+                        size_hint_y: 1
+                        on_text: root.on_apn_user(*args)
+                GridLayout:
+                    padding: (0, dp(5))
+                    cols: 2
+                    FieldLabel:
+                        halign: 'right'
+                        text: 'APN Password'
+                        padding: (dp(5),0)                                            
+                    ValueField:
+                        id: apn_pass
+                        size_hint_y: 1
+                        on_text: root.on_apn_pass(*args)    
+""")
+
+    CUSTOM_APN = 'Custom APN'
+    base_dir = StringProperty(None, noneallowed=True)
+    rc_config = ObjectProperty()
+
+    def __init__(self, **kwargs):
+        super(CellSettingsView, self).__init__(**kwargs)
+        self.register_event_type('on_modified')
+        self.loaded = False
+        self.cell_provider_info = {}
+
+    def on_modified(self):
+        pass
+
+    def on_rc_config(self, instance, value):
+        self.init_view()
+
+    def on_base_dir(self, instance, value):
+        self.init_view()
+
+    def init_view(self):
+        if None in [self.base_dir, self.rc_config]:
+            return
+
+        cell_enable = self.ids.cell_enable
+        cell_enable.setControl(SettingsSwitch(active=self.rc_config.connectivityConfig.cellConfig.cellEnabled))
+        cell_enable.control.bind(active=self.on_cell_change)
+
+        cell_provider = self.ids.cell_provider
+        cell_provider.bind(on_setting=self.on_cell_provider)
+        apn_spinner = SettingsMappedSpinner()
+
+        self.load_apn_settings_spinner(apn_spinner)
+        self.apn_spinner = apn_spinner
+        cell_provider.setControl(apn_spinner)
+        self._update_from_config()
+        self.loaded = True
+
+    def _update_from_config(self):
+        cellEnable = self.ids.cell_enable
+        cell_config = self.rc_config.connectivityConfig.cellConfig
+        self.ids.apn_host.text = cell_config.apnHost
+        self.ids.apn_user.text = cell_config.apnUser
+        self.ids.apn_pass.text = cell_config.apnPass
+
+        existing_apn_name = self.update_controls_state()
+        if existing_apn_name:
+            self.apn_spinner.text = existing_apn_name
+
+    def get_apn_setting_by_name(self, name):
+        providers = self.cell_provider_info['cellProviders']
+        for apn_name in providers:
+            if apn_name == name:
+                return providers[apn_name]
+        return None
+
+    def update_controls_state(self):
+        cell_provider_info = self.cell_provider_info
+        existing_apn_name = CellSettingsView.CUSTOM_APN
+        show_custom_fields = True
+        cellConfig = self.rc_config.connectivityConfig.cellConfig
+        providers = cell_provider_info['cellProviders']
+        for name in providers:
+            apnInfo = providers[name]
+            if apnInfo['apn_host'] == cellConfig.apnHost and apnInfo['apn_user'] == cellConfig.apnUser and apnInfo['apn_pass'] == cellConfig.apnPass:
+                existing_apn_name = name
+                show_custom_fields = False
+                break
+        self.ids.custom_apn_screen.current = 'custom' if show_custom_fields else 'blank'
+        return existing_apn_name
+
+    def modified(self):
+        if self.loaded:
+            self.dispatch('on_modified')
+
+    def on_cell_change(self, instance, value):
+        self.rc_config.connectivityConfig.stale = True
+        self.rc_config.connectivityConfig.cellConfig.cellEnabled = value
+        self.modified()
+
+    def on_cell_provider(self, instance, value):
+        apn_setting = self.get_apn_setting_by_name(value)
+        known_provider = False
+        if apn_setting:
+            self.ids.apn_host.text = apn_setting['apn_host']
+            self.ids.apn_user.text = apn_setting['apn_user']
+            self.ids.apn_pass.text = apn_setting['apn_pass']
+            known_provider = True
+        self.ids.custom_apn_screen.current = 'blank' if known_provider else 'custom'
+        self.modified()
+
+    def on_apn_host(self, instance, value):
+        self.rc_config.connectivityConfig.cellConfig.apnHost = value
+        self.rc_config.connectivityConfig.stale = True
+        self.modified()
+
+    def on_apn_user(self, instance, value):
+        self.rc_config.connectivityConfig.cellConfig.apnUser = value
+        self.rc_config.connectivityConfig.stale = True
+        self.modified()
+
+    def on_apn_pass(self, instance, value):
+        self.rc_config.connectivityConfig.cellConfig.apnPass = value
+        self.rc_config.connectivityConfig.stale = True
+        self.modified()
+
+    def load_apn_settings_spinner(self, spinner):
+        try:
+            json_data = open(os.path.join(self.base_dir, 'resource', 'settings', 'cell_providers.json'))
+            cell_provider_info = json.load(json_data)
+            apn_map = {}
+
+            apn_map['custom'] = CellSettingsView.CUSTOM_APN
+            for name in cell_provider_info['cellProviders']:
+                apn_map[name] = name
+
+            spinner.setValueMap(apn_map, CellSettingsView.CUSTOM_APN)
+            self.cell_provider_info = cell_provider_info
+        except Exception as detail:
+            Logger.error('CellSettingsView: Error loading cell providers ' + str(detail))
 
 Builder.load_string('''
 <CellularConfigView>:
@@ -38,178 +218,30 @@ Builder.load_string('''
     height: self.minimum_height
     HSeparator:
         text: 'Cellular Configuration'
-    SettingsView:
-        size_hint_y: 0.20
-        rcid: 'cellEnable'
-        label_text: 'Cellular Module'
-        help_text: 'Enable if the Real-time telemetry module is installed'
-    SettingsView:
+        
+    CellSettingsView:
+        id: cell_settings
+        on_modified: root.modified()
         size_hint_y: None
-        rcid: 'cellprovider'
-        label_text: 'Cellular Provider'
-        help_text: 'Select the cellular provider, or specify custom APN settings'
-    Label:
-        text: 'Custom Cellular Settings'
-        text_size: self.size
-        halign: 'center'
-        font_size: dp(26)
-    GridLayout:
-        cols: 2
-        spacing: (dp(30), dp(5))
-        FieldLabel:
-            text: 'APN Host'
-            halign: 'right'
-        ValueField:
-            rcid: 'apnHost'
-            disabled: True
-            on_text: root.on_apn_host(*args)
-    GridLayout:
-        cols: 2
-        spacing: (dp(30), dp(5))
-        FieldLabel:
-            halign: 'right'
-            text: 'APN User Name'
-        ValueField:
-            rcid: 'apnUser'
-            size_hint_y: 1
-            disabled: True
-            on_text: root.on_apn_user(*args)
-    GridLayout:
-        cols: 2
-        spacing: (dp(30), dp(5))
-        FieldLabel:
-            halign: 'right'
-            text: 'APN Password'
-        ValueField:
-            rcid: 'apnPass'
-            disabled: True
-            size_hint_y: 1
-            on_text: root.on_apn_pass(*args)
+        height: dp(300)
 ''')
 
 
 class CellularConfigView(GridLayout):
 
-    def __init__(self, base_dir, config, **kwargs):
+    def __init__(self, base_dir, rc_config, **kwargs):
         super(CellularConfigView, self).__init__(**kwargs)
         self.connectivityConfig = None
-        self.base_dir = base_dir
-        self.customApnLabel = 'Custom APN'
         self.register_event_type('on_modified')
         self.apnSpinner = None
+        self.ids.cell_settings.base_dir = base_dir
 
-        self.apnHostField = kvFind(self, 'rcid', 'apnHost')
-        self.apnUserField = kvFind(self, 'rcid', 'apnUser')
-        self.apnPassField = kvFind(self, 'rcid', 'apnPass')
+    def config_updated(self, rc_config):
+        self.ids.cell_settings.rc_config = rc_config
+        self.ids.cell_settings.init_view()
 
-        self.config_updated(config)
-
-    def setCustomApnFieldsDisabled(self, disabled):
-        self.apnHostField.disabled = disabled
-        self.apnUserField.disabled = disabled
-        self.apnPassField.disabled = disabled
-
-    def on_apn_host(self, instance, value):
-        if self.connectivityConfig:
-            Logger.info("CellularConfigView: got new apn host")
-            self.connectivityConfig.cellConfig.apnHost = value
-            self.connectivityConfig.stale = True
-            self.dispatch('on_modified')
-
-    def on_apn_user(self, instance, value):
-        if self.connectivityConfig and value != self.connectivityConfig.cellConfig.apnUser:
-            Logger.info("CellularConfigView: got new apn user")
-            self.connectivityConfig.cellConfig.apnUser = value
-            self.connectivityConfig.stale = True
-            self.dispatch('on_modified')
-
-    def on_apn_pass(self, instance, value):
-        if self.connectivityConfig and value != self.connectivityConfig.cellConfig.apnPass:
-            Logger.info("CellularConfigView: got new apn pass")
-            self.connectivityConfig.cellConfig.apnPass = value
-            self.connectivityConfig.stale = True
-            self.dispatch('on_modified')
-
-    def loadApnSettingsSpinner(self, spinner):
-        try:
-            json_data = open(os.path.join(self.base_dir, 'resource', 'settings', 'cell_providers.json'))
-            cellProviderInfo = json.load(json_data)
-            apnMap = {}
-            apnMap['custom'] = self.customApnLabel
-
-            for name in cellProviderInfo['cellProviders']:
-                apnMap[name] = name
-
-            spinner.setValueMap(apnMap, self.customApnLabel)
-            self.cellProviderInfo = cellProviderInfo
-        except Exception as detail:
-            print('Error loading cell providers ' + str(detail))
-
-    def getApnSettingByName(self, name):
-        providers = self.cellProviderInfo['cellProviders']
-        for apnName in providers:
-            if apnName == name:
-                return providers[apnName]
-        return None
-
-    def on_cell_provider(self, instance, value):
-        apnSetting = self.getApnSettingByName(value)
-        knownProvider = False
-        if apnSetting:
-            self.apnHostField.text = apnSetting['apn_host']
-            self.apnUserField.text = apnSetting['apn_user']
-            self.apnPassField.text = apnSetting['apn_pass']
-            knownProvider = True
-
-        self.update_controls_state()
-        self.setCustomApnFieldsDisabled(knownProvider)
-
-    def on_cell_change(self, instance, value):
-        if self.connectivityConfig:
-            Logger.info("CellularConfigView: got new cell enabled change")
-            self.connectivityConfig.cellConfig.cellEnabled = value
-            self.connectivityConfig.stale = True
-            self.dispatch('on_modified')
-
-    def update_controls_state(self):
-        if self.connectivityConfig:
-            cellProviderInfo = self.cellProviderInfo
-            existingApnName = self.customApnLabel
-            customFieldsDisabled = False
-            cellConfig = self.connectivityConfig.cellConfig
-            providers = cellProviderInfo['cellProviders']
-            for name in providers:
-                apnInfo = providers[name]
-                if apnInfo['apn_host'] == cellConfig.apnHost and apnInfo['apn_user'] == cellConfig.apnUser and apnInfo['apn_pass'] == cellConfig.apnPass:
-                    existingApnName = name
-                    customFieldsDisabled = True
-                    break
-            self.setCustomApnFieldsDisabled(customFieldsDisabled)
-            return existingApnName
-
-    def config_updated(self, rcpCfg):
-
-        cellEnable = kvFind(self, 'rcid', 'cellEnable')
-        cellEnable.setControl(SettingsSwitch(active=rcpCfg.connectivityConfig.cellConfig.cellEnabled))
-        cellEnable.control.bind(active=self.on_cell_change)
-
-        cellProvider = kvFind(self, 'rcid', 'cellprovider')
-        cellProvider.bind(on_setting=self.on_cell_provider)
-        apnSpinner = SettingsMappedSpinner()
-
-        self.loadApnSettingsSpinner(apnSpinner)
-        self.apnSpinner = apnSpinner
-        cellProvider.setControl(apnSpinner)
-
-        self.apnHostField.text = rcpCfg.connectivityConfig.cellConfig.apnHost
-        self.apnUserField.text = rcpCfg.connectivityConfig.cellConfig.apnUser
-        self.apnPassField.text = rcpCfg.connectivityConfig.cellConfig.apnPass
-
-        existingApnName = self.update_controls_state()
-        if existingApnName:
-            self.apnSpinner.text = existingApnName
-
-        self.connectivityConfig = rcpCfg.connectivityConfig
+    def modified(self):
+        self.dispatch('on_modified')
 
     def on_modified(self):
         pass

@@ -157,6 +157,9 @@ class SingleChannelGauge(Gauge):
             self._update_display(channel_meta)
             self.update_title(channel, channel_meta)
 
+    def update_channel_ranges(self):
+        pass
+
     def _update_gauge_meta(self):
         try:
             if self.settings:
@@ -164,7 +167,7 @@ class SingleChannelGauge(Gauge):
                 self._update_display(channel_meta)
                 self.update_title(self.channel, channel_meta)
                 self._update_channel_binding()
-                self._update_channel_ranges()
+                self.update_channel_ranges()
         except Exception as e:
             Logger.error('Gauge: Error setting channel {}: {}'.format(self.channel, str(e)))
 
@@ -269,7 +272,7 @@ class CustomizableGauge(ButtonBehavior, SingleChannelGauge):
     def _get_alert_prefs_key(self, channel):
         return '{}.alert'.format(self.channel)
 
-    def _update_channel_ranges(self):
+    def update_channel_ranges(self):
         channel = self.channel
         user_prefs = self.settings.userPrefs
         self.warning = user_prefs.get_range_alert(self._get_warn_prefs_key(channel), self.warning)

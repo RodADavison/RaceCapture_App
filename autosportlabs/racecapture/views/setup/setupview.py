@@ -170,7 +170,36 @@ class SetupView(Screen):
 
         self._show_next_screen()
 
+    def _adjust_steps(self):
+        # adjust steps based on device capabilities
+        rc_config = self._rc_config
+        if not rc_config.loaded:
+            return
+
+        steps_to_remove = []
+        setup_steps = self._setup_config['steps']
+        for s in setup_steps:
+            requires_flag = s.get('requiresFlag', None)
+            if requires_flag is not None:
+                if not rc_config.capabilities.has_flag(requires_flag):
+                    steps_to_remove.append(s['key'])
+
+        for s in steps_to_remove:
+            self._remove_step(s)
+
+    def _remove_step(self, key):
+        step = self._steps.get(key)
+        if step is not None:
+            del self._steps[key]
+            self.ids.steps.remove_widget(step)
+            setup_steps = self._setup_config['steps']
+            for s in setup_steps:
+                if s['key'] == key:
+                    setup_steps.remove(s)
+                    break
+
     def _show_next_screen(self):
+        self._adjust_steps()
         screen, step = self._select_next_view()
         if screen and step:
             self.ids.screen_manager.switch_to(screen)
@@ -208,6 +237,7 @@ class SetupView(Screen):
         screen.rc_config = self._rc_config
         screen.track_manager = self._track_manager
         screen.setup_config = self._setup_config
+        screen.base_dir = self._base_dir
         return screen
 
     def _setup_complete(self, show_next_time=False):

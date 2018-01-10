@@ -29,7 +29,9 @@ from kivy3 import Scene, Renderer, PerspectiveCamera
 from kivy3.loaders import OBJLoader
 from kivy.core.window import Window
 from kivy.metrics import dp
+from kivy.uix.label import Label
 import os
+from utils import is_ios
 
 class ImuView(BoxLayout):
     ACCEL_SCALING = 1.0
@@ -84,6 +86,10 @@ class ImuView(BoxLayout):
     def _setup_object(self):
 
         self.clear_widgets()
+        if is_ios():  # TODO enable this when iOS bug is resolved
+            self.add_widget(Label(text='3D render currently disabled\nfor iOS', halign='center'))
+            return
+
         shader_file = resource_find(os.path.join('resource', 'models', 'shaders.glsl'))
         obj_path = resource_find(self.model_path)
 
@@ -110,13 +116,14 @@ class ImuView(BoxLayout):
             # obj.material.shininess = 1.0
 
         self.renderer.render(scene, camera)
-        self.add_widget(self.renderer)
         self.renderer.bind(size=self._adjust_aspect)
+        Clock.schedule_once(lambda dt: self.add_widget(self.renderer))
+
 
     def _adjust_aspect(self, instance, value):
         rsize = self.renderer.size
-        width = rsize[0]
-        height = rsize[1]
+        width = max(1, rsize[0])
+        height = max(1, rsize[1])
         if height == 0:
             return
         self.renderer.camera.aspect = width / float(height)

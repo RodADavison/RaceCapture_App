@@ -1423,6 +1423,9 @@ class Capabilities(object):
         self.bluetooth_config = True
         self.flags = []
 
+    def has_flag(self, flag):
+        return flag in self.flags
+
     @property
     def has_gps(self):
         return 'gps' in self.flags

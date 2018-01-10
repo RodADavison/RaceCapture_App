@@ -5,6 +5,7 @@
 * Core: improve spacing / proportions for iOS
 * Core: Gracefully handle statusview errors when status values aren't available
 * Core: Fix runtime error: cannot release un-acquired lock
+* Core: Include missing msvcr100.dll for windows platform
 * Dashboard: Save preferences faster when changing dashboard gauges
 * Dashboard: Save preferences if you un-set a dashboard gauge
 * Dashboard: Fix 'division by zero' error if you select a channel with no range defined (like Interval)
@@ -16,6 +17,14 @@
 * Analysis: Gracefully handle invalid data upon export
 * Analysis: Gracefully handle corrupted data in imported datalog
 * Analysis: Fix duplicate column name error upon import, (allow case insensitive channel names)
+* Status: Add human readable cellular signal strength indicator to status view
+* Setup: Enhance first-time setup with system wide presets screen
+* Setup: Enhance first-time setup with cell carrier option screen
+* Setup: Enhance first-time setup with favorite track selection screen
+* Setup: Add PodiumConnect to first time setup wizard
+* Setup: Add additional OBDII PIDs to dropdown
+* Setup: Enable CAN channel mapping with sub-IDs
+* Setup: Sort list of tracks by name
 * Setup: Add FreedomPop APN
 * Setup: Enable 11/29 bit OBDII selection switch
 * Setup: Allow 32 bit OBDII mode values

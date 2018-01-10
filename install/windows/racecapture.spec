@@ -9,16 +9,19 @@ import sys
 from kivy.deps import sdl2, glew
 
 def addDataFiles():
-    allFiles = Tree('..//')
+    allFiles = Tree('../..//')
     extraDatas = []
     for file in allFiles:
-        if file[0].endswith('.kv') | file[0].endswith('.ttf') | file[0].startswith('defaults/') | file[0].startswith('defaults\\')| file[0].startswith('resource/') | file[0].startswith('resource\\') | (file[0] == 'LICENSE') | (file[0] == 'CHANGELOG.txt'):
+        if file[0].endswith('.png') | file[0].endswith('.kv') | file[0].endswith('.ttf') | file[0].startswith('defaults/') | file[0].startswith('defaults\\')| file[0].startswith('resource/') | file[0].startswith('resource\\') | (file[0] == 'LICENSE') | (file[0] == 'CHANGELOG.txt'):
             print "Adding datafile: " + file[0]
             extraDatas.append(file)
+    allFiles = Tree('./dependencies')
+    for file in allFiles:
+        extraDatas.append(file)
     return extraDatas
 
-a = Analysis(['..//main.py'],
-    pathex=['..//'],
+a = Analysis(['../..//main.py'],
+    pathex=['../..//'],
     hiddenimports=['pygments.lexers.python.PythonLexer'],
     runtime_hooks=None)
 a.datas += addDataFiles()
@@ -28,7 +31,7 @@ exe = EXE(pyz,
     #[('v', None, 'OPTION')],
     exclude_binaries=True,
     name='racecapture' + ('.exe' if sys.platform == 'win32' else ''),
-    icon='..//resource//images//app_icon_128x128.ico',
+    icon='../..//resource//images//app_icon_128x128.ico',
     version='temp_win_versioninfo.txt',
     debug=False,
     strip=None,

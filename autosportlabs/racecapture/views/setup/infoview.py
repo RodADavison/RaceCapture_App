@@ -75,6 +75,7 @@ class InfoView(Screen):
     setup_config = ObjectProperty()
     preset_manager = ObjectProperty()
 
+    base_dir = StringProperty()
     next_text = StringProperty('Next')
     next_icon = StringProperty(u'\uf0a9')
     background_source = StringProperty()

@@ -5,3 +5,5 @@ test
 install/osx
 install/build
 install/dist
+install/windows
+
