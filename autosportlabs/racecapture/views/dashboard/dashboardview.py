@@ -27,8 +27,9 @@ from kivy.app import Builder
 from kivy.core.window import Window, Keyboard
 from kivy.logger import Logger
 from kivy.clock import Clock
-from kivy.properties import StringProperty, NumericProperty
+from kivy.properties import StringProperty, NumericProperty, ObjectProperty, ListProperty, BooleanProperty
 from utils import kvFindClass
+from kivy.animation import Animation
 from kivy.uix.carousel import Carousel
 from kivy.uix.settings import SettingsWithNoMenu
 from kivy.uix.modalview import ModalView
@@ -58,6 +59,9 @@ from autosportlabs.racecapture.views.dashboard.heatmapview import HeatmapView
 from autosportlabs.racecapture.views.dashboard.racestatus_view import RaceStatusView
 
 
+from autosportlabs.telemetry.telemetryconnection import TelemetryManager
+from autosportlabs.racecapture.alerts.alertengine import AlertEngine
+from autosportlabs.racecapture.alerts.alertactions import PopupAlertAction
 from autosportlabs.racecapture.geo.geopoint import GeoPoint
 from autosportlabs.widgets.scrollcontainer import ScrollContainer
 from autosportlabs.help.helpmanager import HelpInfo
@@ -66,6 +70,7 @@ from autosportlabs.racecapture.theme.color import ColorScheme
 from fieldlabel import FieldLabel
 from collections import OrderedDict
 from copy import copy
+import math
 
 # Dashboard screens
 from autosportlabs.racecapture.views.dashboard.gaugeview import GaugeView2x, GaugeView3x, GaugeView5x, GaugeView8x
@@ -73,7 +78,52 @@ from autosportlabs.racecapture.views.dashboard.tachometerview import TachometerV
 from autosportlabs.racecapture.views.dashboard.laptimeview import LaptimeView
 from autosportlabs.racecapture.views.dashboard.rawchannelview import RawChannelView
 
+class DashboardState(object):
+    def __init__(self, **kwargs):
+        self._gauge_colors = {}
+        self._active_alerts = {}
 
+    def set_channel_color(self, channel, color_alertaction):
+        color_stack = self._gauge_colors.get(channel)
+        if color_stack is None:
+            self._gauge_colors[channel] = [color_alertaction]
+        else:
+            color_stack.insert(0, color_alertaction)
+
+    def get_gauge_color(self, channel):
+        color_stack = self._gauge_colors.get(channel)
+        return next(iter(color_stack), None) if color_stack is not None else None
+
+    def clear_channel_color(self, channel, color_alertaction):
+        color_stack = self._gauge_colors.get(channel)
+        if color_stack is None:
+            return
+
+        for aa in color_stack:
+            if aa == color_alertaction:
+                color_stack.remove(aa)
+                return
+
+    def set_popupalert(self, channel, popup_alertaction):
+        self._active_alerts[channel] = popup_alertaction
+
+    def clear_popupalert(self, channel, popup_alertaction):
+        if popup_alertaction == self._active_alerts.get(channel):
+            # ensure we're removing *this* popup_alertaction, not
+            self._active_alerts.pop(channel, None)
+
+    def get_popupalerts(self):
+        return self._active_alerts
+
+    def clear_channel_states(self, channel):
+        color_stack = self._gauge_colors.pop(channel, None)
+        if color_stack is not None:
+            for aa in color_stack:
+                aa.is_active = False
+
+        popup_alertaction = self._active_alerts.pop(channel, None)
+        if popup_alertaction is not None:
+            popup_alertaction.is_active = False
 
 class DashboardFactory(object):
     """
@@ -81,14 +131,19 @@ class DashboardFactory(object):
     Screens are instances of DashboardScreen
     Screens are referenced and managed by their key name. 
     """
-    def __init__(self, databus, settings, track_manager, status_pump, **kwargs):
+    def __init__(self, dashboard_state, databus, settings, track_manager, status_pump, **kwargs):
         self._view_builders = OrderedDict()
         self._view_previews = OrderedDict()
         self._databus = databus
         self._settings = settings
         self._track_manager = track_manager
         self._status_pump = status_pump
+        self._dashboard_state = dashboard_state
         self._init_factory()
+        self._gauge_colors = {}
+
+    def get_gauge_color(self, channel):
+        return self._gauge_colors.get(channel)
 
     def create_screen(self, key):
         """
@@ -115,9 +170,9 @@ class DashboardFactory(object):
         self._add_screen('rawchannel_view', self.build_raw_channel_view, 'Raw Channels', 'raw_channel_view.png')
         self._add_screen('traction_view', self.build_traction_view, 'Traction', 'traction_view.png')
         self._add_screen('heatmap_view', self.build_heatmap_view, 'Heatmap', 'heatmap_view.png')
-        
+
         # Disabled until ready for use
-        #self._add_screen('racestatus_view', self.build_racestatus_view, 'Race Status', '')
+        # self._add_screen('racestatus_view', self.build_racestatus_view, 'Race Status', '')
 
     @property
     def available_dashboards(self):
@@ -137,41 +192,323 @@ class DashboardFactory(object):
         return self._view_previews.get(key)
 
     def build_5x_gauge_view(self):
-        return GaugeView5x(name='5x_gauge_view', databus=self._databus, settings=self._settings)
+        return GaugeView5x(name='5x_gauge_view',
+                           databus=self._databus,
+                           settings=self._settings,
+                           dashboard_state=self._dashboard_state)
 
     def build_3x_gauge_view(self):
-        return GaugeView3x(name='3x_gauge_view', databus=self._databus, settings=self._settings)
+        return GaugeView3x(name='3x_gauge_view',
+                           databus=self._databus,
+                           settings=self._settings,
+                           dashboard_state=self._dashboard_state)
 
     def build_2x_gauge_view(self):
-        return GaugeView2x(name='2x_gauge_view', databus=self._databus, settings=self._settings)
+        return GaugeView2x(name='2x_gauge_view',
+                           databus=self._databus,
+                           settings=self._settings,
+                           dashboard_state=self._dashboard_state)
 
     def build_8x_gauge_view(self):
-        return GaugeView8x(name='8x_gauge_view', databus=self._databus, settings=self._settings)
+        return GaugeView8x(name='8x_gauge_view',
+                           databus=self._databus,
+                           settings=self._settings,
+                           dashboard_state=self._dashboard_state)
 
     def build_tachometer_view(self):
-        return TachometerView(name='tach_view', databus=self._databus, settings=self._settings)
+        return TachometerView(name='tach_view',
+                              databus=self._databus,
+                              settings=self._settings,
+                              dashboard_state=self._dashboard_state)
 
     def build_laptime_view(self):
-        return LaptimeView(name='laptime_view', databus=self._databus, settings=self._settings)
+        return LaptimeView(name='laptime_view',
+                           databus=self._databus,
+                           settings=self._settings,
+                           dashboard_state=self._dashboard_state)
 
     def build_raw_channel_view(self):
-        return RawChannelView(name='rawchannel_view', databus=self._databus, settings=self._settings)
+        return RawChannelView(name='rawchannel_view',
+                              databus=self._databus,
+                              settings=self._settings,
+                              dashboard_state=self._dashboard_state)
 
     def build_traction_view(self):
-        return TractionView(name='traction_view', databus=self._databus, settings=self._settings)
+        return TractionView(name='traction_view',
+                            databus=self._databus,
+                            settings=self._settings,
+                            dashboard_state=self._dashboard_state)
 
     def build_racestatus_view(self):
         return RaceStatusView(name='racestatus_view',
                               databus=self._databus,
                               settings=self._settings,
+                              dashboard_state=self._dashboard_state,
                               track_manager=self._track_manager,
                               status_pump=self._status_pump)
 
     def build_heatmap_view(self):
         return HeatmapView(name='heatmap_view', databus=self._databus,
                            settings=self._settings,
+                           dashboard_state=self._dashboard_state,
                            track_manager=self._track_manager,
                            status_pump=self._status_pump)
+
+class AlertScreen(Screen):
+    popup_alertaction = ObjectProperty()
+
+    timeout = NumericProperty()
+    key = StringProperty()
+    popup_alert_view = ObjectProperty()
+    source = ObjectProperty(None)
+    high_priority = BooleanProperty()
+    background_color = ListProperty()
+    shape_color = ListProperty()
+    shape_vertices = ListProperty()
+    shape_indices = ListProperty()
+
+    Builder.load_string("""
+<AlertScreen>
+    BoxLayout:
+            
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: root.background_color
+            Rectangle:
+                size: self.size
+                pos: self.pos
+        
+        AnchorLayout:
+            canvas.before:
+                Color:
+                    rgba: root.shape_color
+                Mesh:
+                    vertices: root.shape_vertices
+                    indices: root.shape_indices
+                    mode: 'triangle_fan'
+            size_hint_y: 0.5
+            id: alert_container
+            FieldLabel:
+                text: root.popup_alertaction.message
+                id: alert_msg
+                halign: 'center'
+                font_size: min(dp(90), self.height)
+            
+        BoxLayout:
+            size_hint_y: 0.5
+            IconButton:
+                text: u'\uf00d'
+                id: alert_msg_no
+                on_press: root._alert_msg_no()
+            IconButton:
+                text: u'\uf00c'
+                id: alert_msg_yes
+                on_press: root._alert_msg_yes()
+            
+    """)
+
+    def __init__(self, **kwargs):
+        super(AlertScreen, self).__init__(**kwargs)
+        Clock.schedule_once(self._init_view)
+        self.anim = None
+        self.ack_msg = 'OK'
+
+    def on_popup_alertaction(self, instance, value):
+        self._update_shape()
+        self._update_colors()
+
+    def _init_view(self, *args):
+        is_question = self.popup_alertaction.message.endswith('?')
+        self.ids.alert_msg_yes.size_hint = (1.0, 1.0) if is_question else (0, 0)
+        self.ack_msg = 'NO' if is_question else 'OK'
+
+        self.ids.alert_container.bind(size=self._update_shape)
+
+        if self.high_priority:
+            anim = Animation(color=(1, 1, 1, 0), duration=0.2) + Animation(color=(1, 1, 1, 0), duration=0.2)
+            anim += Animation(color=(1, 1, 1, 1), duration=0.2) + Animation(color=(1, 1, 1, 1), duration=0.2)
+            anim.repeat = True
+            anim.start(self.ids.alert_msg)
+            self.anim = anim
+
+    def _update_colors(self):
+        color = self.popup_alertaction.color_rgb
+        dim_color = [color[0] * 0.5, color[1] * 0.5, color[2] * 0.5, 1.0]
+        bright_color = color
+        shape = self.popup_alertaction.shape
+
+        self.shape_color = bright_color if shape is not None else dim_color
+        self.background_color = bright_color if shape is None else dim_color
+
+    def _update_shape(self, *args):
+        if len(args) != 2:
+            return
+        ac = self.ids.alert_container
+        size = ac.size
+        pos = ac.pos
+        shape = self.popup_alertaction.shape
+        if shape is None:
+            self.shape_vertices = []
+            self.shape_indices = []
+        elif shape == 'triangle':
+            # calculate points for a centered triangle
+            center = (size[0] / 2, size[1] / 2)
+            length = size[1] * 1
+            size_half = length / 2
+            triangle_height = size_half * math.sqrt(3)
+            x = center[0] - size_half + pos[0]
+            y = center[1] - triangle_height / 2 + pos[1]
+            self.shape_vertices = [x, y, 0, 0, center[0], y + triangle_height, 0, 0, x + length, y, 0, 0]
+            self.shape_indices = [0, 1, 2]
+        elif shape == 'octagon':
+            # calculate points for a centered octagon
+            center = (size[0] / 2, size[1] / 2)
+            length = size[1] * .9
+            size_half = length / 2
+            size_13rd = length / 3
+            size_23rds = size_13rd * 2
+            x = center[0] - size_half + pos[0]
+            y = center[1] - size_half + pos[1]
+            self.shape_vertices = [x + size_13rd, y, 0, 0,
+                                   x, y + size_13rd, 0, 0,
+                                   x, y + size_23rds, 0, 0,
+                                   x + size_13rd, y + length, 0, 0,
+                                   x + size_23rds, y + length, 0, 0,
+                                   x + length, y + size_23rds, 0, 0,
+                                   x + length, y + size_13rd, 0, 0,
+                                   x + size_23rds, y, 0, 0
+                                   ]
+            self.shape_indices = [0, 1, 2, 3, 4, 5, 6, 7]
+        else:
+            self.shape_vertices = []
+            self.shape_indices = []
+
+    def on_enter(self):
+        if self.anim is not None:
+            self.anim.start(self.ids.alert_msg)
+
+    def on_leave(self):
+        self.stop_screen()
+
+    def stop_screen(self):
+        if self.anim is not None:
+           self.anim.repeat = False
+
+    def _hide(self, *args):
+        self.popup_alertaction.is_squelched = True
+        self.popup_alert_view.remove_alert(self.key)
+
+    def _alert_msg_yes(self):
+        self.popup_alert_view.send_api_alert_msg(self.source, 'YES')
+        self._hide()
+
+    def _alert_msg_no(self):
+        self.popup_alert_view.send_api_alert_msg(self.source, self.ack_msg)
+        self._hide()
+
+class PopupAlertView(BoxLayout):
+    Builder.load_string("""
+<PopupAlertView>:
+    size_hint_x: None
+    width: dp(600)
+    pos_hint:{"center_x":0.5}
+    id: alertbar
+    size_hint_y: None
+    height: 0
+    orientation: 'vertical'
+    BoxLayout:
+        ScreenManager:
+            id: screens
+    """)
+
+    MSG_CHAR_WIDTH = 60
+    MIN_POPUP_WIDTH = dp(600)
+    def __init__(self, **kwargs):
+        super(PopupAlertView, self).__init__(**kwargs)
+        self.minimize = None
+        self._current_screens = {}
+        Clock.schedule_interval(self._show_next_screen, 2.0)
+        self.minimize_trigger = Clock.create_trigger(self._minimize, 4.0)
+
+
+    def _adjust_width(self):
+        min_width = PopupAlertView.MIN_POPUP_WIDTH
+        for screen in self._current_screens.itervalues():
+            min_width = max(min_width, len(screen.popup_alertaction.message) * PopupAlertView.MSG_CHAR_WIDTH)
+        self.width = min(min_width, Window.width)
+
+    def _show_next_screen(self, *args):
+        next_screen = self.ids.screens.next()
+        if next_screen is not None:
+            self.ids.screens.current = next_screen
+
+    def send_api_alert_msg(self, source, msg):
+        source.send_api_msg({'alertmsgReply':{'priority':1, 'message':msg}})
+
+    def send_api_alert_msg_ack(self, source, msg_id):
+        source.send_api_msg({'alertmsgAck':{'id':msg_id}})
+
+    def _hide(self, screen):
+        if self.minimize is not None:
+            Clock.unschedule(self._minimize)
+        a = Animation(height=0, duration=0.5)
+        a.bind(on_complete=lambda x, y: self.ids.screens.clear_widgets([screen]))
+        a.start(self)
+
+    def _minimize(self, *args):
+        a = Animation(height=self.height * DashboardView.ALERT_BAR_HEIGHT_NORMAL_PCT, duration=1.0, t=DashboardView.TRANSITION_STYLE).start(self)
+
+    def remove_alert(self, key):
+        screen = self._current_screens.pop(key, None)
+        self._adjust_width()
+        if screen is None:
+            return
+
+        screen.stop_screen()
+
+        if not bool(self._current_screens):
+            # if there no other screens showing, defer until
+            # hide animation is complete
+            self._hide(screen)
+        else:
+            # remove the screen immediately
+            self.ids.screens.clear_widgets([screen])
+
+
+    def get_active_alerts(self):
+        return self._current_screens.itervalues()
+
+    def add_alert(self, key, popup_alertaction, source, high_priority, msg_id, timeout):
+        current_screen = self._current_screens.get(key)
+        if current_screen is not None:
+            return
+
+        screen = AlertScreen(name=key,
+                             key=key,
+                             source=source,
+                             high_priority=high_priority,
+                             msg_id=msg_id,
+                             timeout=timeout,
+                             popup_alert_view=self,
+                             popup_alertaction=popup_alertaction)
+
+        self._current_screens[key] = screen
+        self.ids.screens.add_widget(screen)
+        self.ids.screens.current = screen.name
+
+        self._show_alert()
+        self.send_api_alert_msg_ack(source, msg_id)
+
+        # reset the minimize timer
+        self.minimize_trigger.cancel()
+        self.minimize_trigger()
+        self._adjust_width()
+
+    def _show_alert(self):
+        target_height = self.parent.height * (DashboardView.ALERT_BAR_HEIGHT_URGENT_PCT)  # if is_high_priority else DashboardView.ALERT_BAR_HEIGHT_NORMAL_PCT)
+        Animation(height=target_height, duration=0.5, t=DashboardView.TRANSITION_STYLE).start(self)
+
 
 DASHBOARD_VIEW_KV = """
 <DashboardView>:
@@ -188,7 +525,8 @@ DASHBOARD_VIEW_KV = """
                 size_hint_y: 0.90
                 loop: True
             BoxLayout:
-                size_hint_y: 0.10
+                size_hint_y: None
+                height: dp(50)
                 orientation: 'horizontal'
                 IconButton:
                     color: [1.0, 1.0, 1.0, 1.0]
@@ -221,6 +559,17 @@ DASHBOARD_VIEW_KV = """
                 halign: 'left'
                 color: [1.0, 1.0, 1.0, 0.2]
                 on_press: root.on_preferences()
+        AnchorLayout:
+            anchor_x: 'center'
+            anchor_y: 'bottom'
+            
+            BoxLayout:
+                orientation: 'vertical'
+                PopupAlertView:
+                    id: popup_alert
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(50)
 """
 
 class DashboardView(Screen):
@@ -232,15 +581,25 @@ class DashboardView(Screen):
     _POPUP_DISMISS_TIMEOUT_LONG = 60.0
     AUTO_CONFIGURE_WAIT_PERIOD_DAYS = 1
     Builder.load_string(DASHBOARD_VIEW_KV)
+    ALERT_BAR_HEIGHT_URGENT_PCT = 0.8
+    ALERT_BAR_HEIGHT_NORMAL_PCT = 0.25
+    ALERT_BAR_GROW_RATE = dp(20)
+    ALERT_BAR_UPDATE_INTERVAL = 0.02
+    TRANSITION_STYLE = 'in_out_expo'
+    ALERT_ENGINE_INTERVAL = 0.1
 
     def __init__(self, status_pump, track_manager, rc_api, rc_config, databus, settings, **kwargs):
         self._initialized = False
         super(DashboardView, self).__init__(**kwargs)
-        self._dashboard_factory = DashboardFactory(databus, settings, track_manager, status_pump)
+
+        dashboard_state = self._dashboard_state = DashboardState()
+        self._alert_engine = AlertEngine(self._dashboard_state)
+        self._dashboard_factory = DashboardFactory(dashboard_state, databus, settings, track_manager, status_pump)
         self.register_event_type('on_tracks_updated')
         self.register_event_type('on_config_updated')
         self.register_event_type('on_config_written')
         self._screens = []
+        self._current_screen = None
         self._loaded_screens = {}
         self._status_pump = status_pump
         self._databus = databus
@@ -254,6 +613,51 @@ class DashboardView(Screen):
         self._track_config = None
         self._gps_sample = GpsSample()
         status_pump.add_listener(self.status_updated)
+        self.alert_bar_height = 0
+        self._start_alert_engine()
+        self._current_sample = None
+
+    def _start_alert_engine(self):
+        self._databus.add_sample_listener(self._on_sample)
+
+        Clock.schedule_interval(self._check_alerts, DashboardView.ALERT_ENGINE_INTERVAL)
+
+    def _on_sample(self, sample):
+        self._current_sample = sample
+
+    def _check_alerts(self, *args):
+        prefs = self._settings.userPrefs
+        current_sample = self._current_sample
+        if current_sample is not None:
+            for channel, value in current_sample.iteritems():
+                alertrules = prefs.get_alertrules(channel)
+                self._alert_engine.process_rules(alertrules, channel, value)
+
+
+        dashboard_state = self._dashboard_state
+        active_alerts = dashboard_state.get_popupalerts()
+        popup_alert = self.ids.popup_alert
+
+        # add screens as necessary
+        displayed_alert_screens = popup_alert.get_active_alerts()
+        displayed_alertactions = [s.popup_alertaction for s in displayed_alert_screens]
+        for channel, popup_alertaction in active_alerts.iteritems():
+            if not popup_alertaction.is_squelched and not popup_alertaction in displayed_alertactions:
+                popup_alert.add_alert(key=channel,
+                                               source=self._alert_engine,
+                                               high_priority=False,
+                                               msg_id=0,
+                                               timeout=1.0,
+                                               popup_alertaction=popup_alertaction)
+
+        # remove screens as necessary
+        # only remove screens that are generated by AlertEngione
+        displayed_alert_screens = popup_alert.get_active_alerts()
+        alert_screens_to_remove = [s for s in displayed_alert_screens
+                                   if not s.popup_alertaction in active_alerts.itervalues()
+                                   and s.source == self._alert_engine]
+        for s in alert_screens_to_remove:
+            popup_alert.remove_alert(s.key)
 
     def status_updated(self, status):
         """
@@ -286,16 +690,19 @@ class DashboardView(Screen):
     def _init_global_gauges(self):
         databus = self._databus
         settings = self._settings
+        dashboard_state = self._dashboard_state
 
         activeGauges = list(kvFindClass(self, Gauge))
 
         for gauge in activeGauges:
             gauge.settings = settings
             gauge.data_bus = databus
+            gauge.dashboard_state = dashboard_state
 
     def _init_view(self):
         databus = self._databus
         settings = self._settings
+        dashboard_state = self._dashboard_state
 
         self._init_global_gauges()
 
@@ -310,6 +717,7 @@ class DashboardView(Screen):
         for gauge in gauges:
             gauge.settings = settings
             gauge.data_bus = databus
+            gauge.dashboard_state = dashboard_state
 
         # Initialize our alert type widgets
         self._alert_widgets['pit_stop'] = PitstopTimerView(databus, 'Pit Stop')
@@ -321,9 +729,21 @@ class DashboardView(Screen):
             self._race_setup()
 
         self._rc_api.add_connect_listener(self._on_rc_connect)
+        self._rc_api.addListener('alertmessage', self._on_alertmessage)
         self._initialized = True
 
         Clock.schedule_once(lambda dt: HelpInfo.help_popup('dashboard_gauge_help', self, arrow_pos='right_mid'), 2.0)
+
+    def _on_alertmessage(self, alertmessage, source):
+
+        msg = alertmessage.get('alertmessage')
+        if msg:
+            alertmessage = msg.get('message')
+            pri = msg.get('priority') == 1
+            msg_id = msg.get('id')
+            self.ids.popup_alert.add_alert('podium_{}'.format(msg_id), PopupAlertAction(message=alertmessage), source, pri, msg_id, 4.0)
+        else:
+            Logger.warning('DashboardView: got malformed alert message: {}'.format(alertmessage))
 
     def _update_screens(self, new_screens):
         """
@@ -556,17 +976,26 @@ class DashboardView(Screen):
         for listener in listeners:
             listener.user_preferences_updated(self._settings.userPrefs)
 
-    def _exit_screen(self):
-        slide_screen = self.ids.carousel.current_slide
-        if (slide_screen.children) > 0:
-            slide_screen.children[0].on_exit()
+    def _exit_screen(self, screen=None):
+        if screen is None:
+            screen = self.ids.carousel.current_slide
+        if len(screen.children) > 0:
+            screen.children[0].on_exit()
+
+    def _pre_enter_screen(self, screen):
+        if screen is not None and len(screen.children) > 0:
+            screen.children[0].on_enter()
 
     def on_nav_left(self):
         self._exit_screen()
-        self.ids.carousel.load_previous()
+        carousel = self.ids.carousel
+        self._pre_enter_screen(carousel.previous_slide)
+        carousel.load_previous()
 
     def on_nav_right(self):
         self._exit_screen()
+        carousel = self.ids.carousel
+        self._pre_enter_screen(carousel.next_slide)
         self.ids.carousel.load_next()
 
     def _check_load_screen(self, slide_screen):
@@ -589,12 +1018,17 @@ class DashboardView(Screen):
                 view = self._dashboard_factory.create_screen(screen_key)
             slide_screen.add_widget(view)
             self._loaded_screens[screen_key] = view
-            view.on_enter()
+        slide_screen.children[0].on_enter()
 
     def on_current_slide(self, slide_screen):
         if self._initialized == True:
             self._check_load_screen(slide_screen)
             view = slide_screen.children[0]
+
+            if self._current_screen is not None:
+                self._exit_screen(self._current_screen)
+            self._current_screen = slide_screen
+
             self._settings.userPrefs.set_pref('dashboard_preferences', 'last_dash_screen', view.name)
 
     def _show_screen(self, screen_name):

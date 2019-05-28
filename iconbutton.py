@@ -99,7 +99,7 @@ ICON_BUTTON_KV = """
     background_down: ''
     font_size: self.height
     
-    color: [1.0, 1.0, 1.0, 0.8]
+    color: [1.0, 1.0, 1.0, 0.2] if self.disabled else [1.0, 1.0, 1.0, 0.8]
     font_name: 'resource/fonts/fa.ttf'
 """
 
@@ -193,7 +193,7 @@ class RoundedRect(BoxLayout):
 
 class TileIconButton(FadeableWidget, ButtonBehavior, AnchorLayout):
     title_font = StringProperty('')
-    title_font_size = NumericProperty(min(30,sp(30)))
+    title_font_size = NumericProperty(min(30, sp(30)))
     tile_color = ObjectProperty((0.5, 0.5, 0.5, 0.8))
     icon_color = ObjectProperty((1.0, 1.0, 1.0, 0.8))
     title_color = ObjectProperty((1.0, 1.0, 1.0, 0.8))

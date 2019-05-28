@@ -18,28 +18,3 @@
 # have received a copy of the GNU General Public License along with
 # this code. If not, see <http://www.gnu.org/licenses/>.
 
-<DigitalGauge>:
-	anchor_x: 'center'
-	anchor_y: 'center'
-	title_size: self.height * 0.5
-	value_size: self.height * 0.7
-	BoxLayout:
-		orientation: 'horizontal'
-		spacing: self.height * 0.1
-		
-		FieldLabel:
-			id: title
-			text: 'channel'
-			font_size: root.title_size
-			halign: 'right'
-		FieldLabel:
-			canvas.before:
-				Color:
-					rgba: root.alert_background_color
-				Rectangle:
-					pos: self.pos
-					size: self.size
-			id: value
-			text: '---'
-			font_size: root.value_size
-			halign: 'center'

@@ -28,6 +28,7 @@ from autosportlabs.racecapture.config.rcpconfig import *
 from autosportlabs.comms.commscommon import PortNotOpenException, CommsErrorException
 from autosportlabs.util.threadutil import safe_thread_exit, ThreadSafeDict
 from autosportlabs.racecapture.config.rcpconfig import Capabilities
+from autosportlabs.racecapture.api.apicontext import ApiDispatcher
 from functools import partial
 from kivy.clock import Clock
 from kivy.logger import Logger
@@ -74,7 +75,6 @@ class RcpApi:
     detect_fail_callback = None
     detect_activity_callback = None
     comms = None
-    msgListeners = {}
     cmdSequenceQueue = Queue.Queue()
     _command_queue = Queue.Queue()
     sendCommandLock = RLock()
@@ -212,18 +212,13 @@ class RcpApi:
         self._auto_detect_event.set()
 
     def addListener(self, messageName, callback):
-        listeners = self.msgListeners.get(messageName, None)
-        if listeners:
-            listeners.add(callback)
-        else:
-            listeners = set()
-            listeners.add(callback)
-            self.msgListeners[messageName] = listeners
+        ApiDispatcher.get_instance().add_listener(messageName, callback)
 
     def removeListener(self, messageName, callback):
-        listeners = self.msgListeners.get(messageName, None)
-        if listeners:
-            listeners.discard(callback)
+        ApiDispatcher.get_instance().remove_listener(messageName, callback)
+
+    def _dispatch_message(self, msg_json):
+        ApiDispatcher.get_instance().dispatch_msg(msg_json, self)
 
     def msg_rx_worker(self):
         Logger.info('RCPAPI: msg_rx_worker starting')
@@ -236,25 +231,15 @@ class RcpApi:
                 if msg:
                     # clean incoming string, and drop illegal characters
                     msg = unicode(msg, errors='ignore')
-                    msgJson = json.loads(msg, strict=False)
+                    msg_json = json.loads(msg, strict=False)
 
-                    if 's' in msgJson:
+                    if 's' in msg_json:
                         Logger.trace('RCPAPI: Rx: ' + str(msg))
                     else:
                         Logger.debug('RCPAPI: Rx: ' + str(msg))
                     Clock.schedule_once(lambda dt: self.on_rx(True))
                     error_count = 0
-                    for messageName in msgJson.keys():
-                        Logger.trace('RCPAPI: processing message ' + messageName)
-                        listeners = self.msgListeners.get(messageName, None)
-                        if listeners:
-                            for listener in listeners:
-                                try:
-                                    listener(msgJson)
-                                except Exception as e:
-                                    Logger.error('RCPAPI: Message Listener Exception for')
-                                    Logger.debug(traceback.format_exc())
-                            break
+                    self._dispatch_message(msg_json)
                     msg = ''
                 else:
                     sleep(NO_DATA_AVAILABLE_DELAY)
@@ -279,7 +264,7 @@ class RcpApi:
         safe_thread_exit()
         Logger.info("RCPAPI: msg_rx_worker exiting")
 
-    def rcpCmdComplete(self, msgReply):
+    def rcpCmdComplete(self, msgReply, source):
         self.cmdSequenceQueue.put(msgReply)
 
     def recoverTimeout(self):
@@ -421,6 +406,9 @@ class RcpApi:
         :return: Function
         """
         return lambda dt: callback(*args)
+
+    def send_api_msg(self, msg):
+        self.sendCommand(msg)
 
     def sendCommand(self, cmd):
         try:
@@ -907,7 +895,7 @@ class RcpApi:
         class VersionResult(object):
             version_json = None
 
-        def on_ver_win(value):
+        def on_ver_win(value, source):
             version_result.version_json = value
             version_result_event.set()
 

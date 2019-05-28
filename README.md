@@ -8,7 +8,7 @@ It includes:
 * A powerful, configurable dashboard;
 * Full configuration for the RaceCapture hardware;
 * Built-in analysis features;
-* The ability to live-stream to http://podium.live
+* The ability to live-stream to http://podium.live.
 
 ## Multi Platform Support
 We actively support 6 platforms, including the Raspberry Pi.

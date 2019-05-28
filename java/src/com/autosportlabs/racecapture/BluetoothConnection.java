@@ -98,7 +98,7 @@ public class BluetoothConnection {
 	/*
 	 * Opens the bluetooth connection with the specified port name
 	 */
-	public void open(String port){
+	public void openConnection(String port){
 		synchronized(this.lock){
 			String error_message = null;
 	        try{
@@ -140,7 +140,7 @@ public class BluetoothConnection {
 	/**
 	 * Closes the current Bluetooth connection
 	 */
-	public void close(){
+	public void closeConnection(){
 		synchronized(this.lock){		
 			try{
 	        	Log.i("BluetoothConnection", "Closing Socket");
@@ -198,7 +198,7 @@ public class BluetoothConnection {
 			}
 			catch(Throwable e){
 				Log.i("BluetoothConnection", "Error writing data " + data + ": " + e.getMessage());
-				this.close();
+				this.closeConnection();
 				return false;
 			}
 		}

@@ -1,3 +1,18 @@
+==1.14.2==
+* Dashboard: fix issue where pit-to-car alerts were not ack'ing or replying with cellular telemetry. 
+
+==1.14.1==
+* Dashboard: Fix issue around saving screen settings
+
+==1.14.0==
+* Dashboard: New alert rules for dashboard supporting colors and popup alerts
+* Dashboard: Enable pit-to-car alerts
+* Dashboard: Improve UI performance by not updating screens that are hidden
+
+==1.13.2==
+* Core: Improve auto-scaling of labels to fit different aspect ratio screens
+* Status: Improve labels on Status view
+
 ==1.13.1==
 * Setup: Fix automatic sd card control not being persisted when changed
 

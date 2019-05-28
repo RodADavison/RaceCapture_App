@@ -93,6 +93,6 @@ class StatusPump(object):
         for listener in self._listeners:
             listener(status)
 
-    def _on_status_updated(self, status):
+    def _on_status_updated(self, status, source):
         self._ready.set()
         Clock.schedule_once(lambda dt: self._update_all_listeners(status))

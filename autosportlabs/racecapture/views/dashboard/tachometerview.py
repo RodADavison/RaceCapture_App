@@ -90,10 +90,11 @@ class TachometerView(DashboardScreen):
     _databus = None
     _settings = None
 
-    def __init__(self, databus, settings, **kwargs):
+    def __init__(self, databus, settings, dashboard_state, **kwargs):
         super(TachometerView, self).__init__(**kwargs)
         self._databus = databus
         self._settings = settings
+        self._dashboard_state = dashboard_state
         self._initialized = False
 
     def on_meta(self, channelMetas):
@@ -114,6 +115,7 @@ class TachometerView(DashboardScreen):
         for gauge in gauges:
             gauge.settings = settings
             gauge.data_bus = dataBus
+            gauge.dashboard_state = self._dashboard_state
 
         self._initialized = True
 

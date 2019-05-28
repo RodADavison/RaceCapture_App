@@ -28,7 +28,7 @@ from kivy.app import Builder
 from kivy.properties import StringProperty
 from kivy.clock import Clock
 
-__all__ = ('format_laptime', 'clock_sequencer')
+__all__ = ('format_laptime', 'clock_sequencer', 'autoformat_number')
 
 NULL_LAP_TIME = '--:--.---'
 MIN_LAP_TIME = 0
@@ -49,3 +49,6 @@ def clock_sequencer(items, start_delay=0.2, spread=0.2):
     for i in items:
         Clock.schedule_once(i, start)
         start += spread
+
+def autoformat_number(value):
+    return str(int(value)) if value == int(value) else str(value)

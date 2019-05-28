@@ -84,16 +84,18 @@ class LaptimeView(DashboardScreen):
     _databus = None
     _settings = None
 
-    def __init__(self, databus, settings, **kwargs):
+    def __init__(self, databus, settings, dashboard_state, **kwargs):
         super(LaptimeView, self).__init__(**kwargs)
         self._databus = databus
         self._settings = settings
+        self._dashboard_state = dashboard_state
         self._initialized = False
 
     def on_meta(self, channelMetas):
         gauges = self.findActiveGauges(SingleChannelGauge)
 
         for gauge in gauges:
+            gauge.dashboard_state = self._dashboard_state
             channel = gauge.channel
             if channel:
                 channelMeta = channelMetas.get(channel)

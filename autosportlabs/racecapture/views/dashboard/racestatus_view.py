@@ -136,11 +136,12 @@ class RaceStatusView(DashboardScreen):
     Builder.load_string(RACE_STATUS_VIEW_KV)
     track_status = StringProperty('Waiting for track')
 
-    def __init__(self, databus, settings, track_manager, status_pump, **kwargs):
+    def __init__(self, databus, settings, dashboard_state, track_manager, status_pump, **kwargs):
         super(RaceStatusView, self).__init__(**kwargs)
         self.register_event_type('on_tracks_updated')
         self._databus = databus
         self._settings = settings
+        self._dashboard_state = dashboard_state
         self._track_manager = track_manager
         self._current_track_id = None
         self._initialized = False
@@ -155,6 +156,7 @@ class RaceStatusView(DashboardScreen):
         for gauge in gauges:
             gauge.settings = settings
             gauge.data_bus = data_bus
+            gauge.dashboard_state = self._dashboard_state
         self._initialized = True
 
 

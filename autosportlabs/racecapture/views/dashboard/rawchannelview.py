@@ -91,12 +91,13 @@ class RawChannelView(DashboardScreen):
     NO_DATA_MSG = 'No Data'
     DATA_MSG = ''
 
-    def __init__(self, databus, settings, **kwargs):
+    def __init__(self, databus, settings, dashboard_state, **kwargs):
         super(RawChannelView, self).__init__(**kwargs)
         self._gauges = {}
         self._bgCurrent = RawGauge.RAW_GRID_BGCOLOR_1
         self._databus = databus
         self._settings = settings
+        self._dashboard_state = dashboard_state
         self._initialized = False
 
     def on_meta(self, channel_metas):
@@ -109,7 +110,7 @@ class RawChannelView(DashboardScreen):
         if not self._initialized:
             self._init_screen()
         super(RawChannelView, self).on_enter()
-        
+
     def _init_screen(self):
         dataBus = self._databus
         dataBus.addMetaListener(self.on_meta)
@@ -129,7 +130,7 @@ class RawChannelView(DashboardScreen):
 
     def _add_gauge(self, channelMeta):
         channel = channelMeta.name
-        gauge = RawGauge(rcid=None, dataBus=self._databus, settings=self._settings, targetchannel=channel)
+        gauge = RawGauge(rcid=None, dataBus=self._databus, settings=self._settings, targetchannel=channel, dashboard_state=self._dashboard_state)
         grid = self.ids.grid
         gauge.precision = channelMeta.precision
 

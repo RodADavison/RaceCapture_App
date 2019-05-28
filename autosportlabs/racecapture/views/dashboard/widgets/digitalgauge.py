@@ -24,17 +24,43 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.app import Builder
 from kivy.metrics import dp
 from utils import kvFind, kvquery
+from fieldlabel import AutoShrinkFieldLabel
 from kivy.properties import NumericProperty, ObjectProperty
 from autosportlabs.racecapture.views.dashboard.widgets.gauge import CustomizableGauge
-
-Builder.load_file('autosportlabs/racecapture/views/dashboard/widgets/digitalgauge.kv')
 
 DEFAULT_BACKGROUND_COLOR = [0, 0, 0, 0]
 
 class DigitalGauge(CustomizableGauge):
+    Builder.load_string("""
+<DigitalGauge>:
+    anchor_x: 'center'
+    anchor_y: 'center'
+    title_size: self.height * 0.5
+    value_size: self.height * 0.7
+    BoxLayout:
+        orientation: 'horizontal'
+        spacing: self.height * 0.1
+        
+        AutoShrinkFieldLabel:
+            id: title
+            text: 'channel'
+            font_size: root.title_size
+            halign: 'right'
+        AutoShrinkFieldLabel:
+            canvas.before:
+                Color:
+                    rgba: root.alert_background_color
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            id: value
+            text: '---'
+            font_size: root.value_size
+            halign: 'center'    
+    """)
 
-    alert_background_color = ObjectProperty(DEFAULT_BACKGROUND_COLOR)        
-    
+    alert_background_color = ObjectProperty(DEFAULT_BACKGROUND_COLOR)
+
     def __init__(self, **kwargs):
         super(DigitalGauge, self).__init__(**kwargs)
         self.normal_color = DEFAULT_BACKGROUND_COLOR
@@ -46,4 +72,5 @@ class DigitalGauge(CustomizableGauge):
             print('Failed to update digital gauge title ' + str(e))
 
     def update_colors(self):
-        self.alert_background_color = self.select_alert_color()
+        alert_color = self.select_alert_color()
+        self.alert_background_color = DEFAULT_BACKGROUND_COLOR if alert_color is None else alert_color

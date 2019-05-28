@@ -380,13 +380,13 @@ class DataBusPump(object):
             except Exception as e:
                 Logger.warning('DataBusPump: Failed to join sample_worker: {}'.format(e))
 
-    def on_meta(self, meta_json):
+    def on_meta(self, meta_json, source):
         metas = self.sample.metas
         metas.fromJson(meta_json.get('meta'))
         self._data_bus.update_channel_meta(metas)
         self._meta_is_stale_counter = 0
 
-    def on_sample(self, sample_json):
+    def on_sample(self, sample_json, source):
         sample = self.sample
         dataBus = self._data_bus
         try:

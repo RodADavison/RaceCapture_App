@@ -32,10 +32,11 @@ from autosportlabs.racecapture.views.dashboard.widgets.digitalgauge import Digit
 from autosportlabs.racecapture.views.dashboard.dashboardscreen import DashboardScreen
 
 class GaugeView(DashboardScreen):
-    def __init__(self, databus, settings, **kwargs):
+    def __init__(self, databus, settings, dashboard_state, **kwargs):
         super(GaugeView, self).__init__(**kwargs)
         self._databus = databus
         self._settings = settings
+        self._dashboard_state = dashboard_state
         self._initialized = False
 
     def on_meta(self, channelMetas):
@@ -66,6 +67,7 @@ class GaugeView(DashboardScreen):
         for gauge in gauges:
             gauge.settings = self._settings
             gauge.data_bus = dataBus
+            gauge.dashboard_state = self._dashboard_state
             channel = self._settings.userPrefs.get_gauge_config(gauge.rcid)
             if channel:
                 gauge.channel = channel

@@ -23,7 +23,6 @@ GAUGE_FRAME_KV = """
         height: dp(25)
         id: title
         font_size: self.height * 0.8
-        text: '{}{}'.format(root.title, '' if root.units is None else ' ({})'.format(root.units))
         halign: 'right'
         padding: (5,5)
         halign: root.halign
@@ -66,7 +65,8 @@ class GaugeFrame(BoxLayout):
             Logger.warn('No title attribute on {}'.format(widget))
 
     def _on_title(self, instance, value):
-        self.title = value
+        value = value.replace('\n', ' ')
+        self.ids.title.text = '{}{}'.format(value, '' if self.units is None else ' ({})'.format(self.units))
 
     def on_color_sequence(self, instance, color_sequence):
         self.raw_gauge.color = color_sequence.get_color(self.title)
@@ -85,4 +85,10 @@ class GaugeFrame(BoxLayout):
 
     def on_value(self, instance, value):
         self.raw_gauge.value = value
+
+    def on_title(self, instance, value):
+        self._on_title(value)
+
+    def on_units(self, instance, value):
+        self._on_title(self.title)
 

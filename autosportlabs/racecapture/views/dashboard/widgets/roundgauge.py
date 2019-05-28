@@ -30,12 +30,40 @@ from kivy.graphics import *
 from kivy.properties import NumericProperty, ListProperty
 from kivy.logger import Logger
 from kivy.core.image import Image as CoreImage
+from fieldlabel import AutoShrinkFieldLabel
 import io
 
 
 class SweepGauge(BoxLayout):
     # these values match the dimensions of the svg elements used in this gauge.
-    Builder.load_file('autosportlabs/racecapture/views/dashboard/widgets/roundgauge.kv')
+    Builder.load_string("""
+<RoundGauge>:
+    anchor_x: 'center'
+    anchor_y: 'center'
+    value_size: self.height * 0.16
+    title_size: self.height * 0.08
+    SweepGauge:
+        id: gauge
+    FieldLabel:
+        id: add_gauge
+        halign: 'center'
+        text: '+'
+        color: (0.5, 0.5, 0.5, 1.0)
+        font_size: self.height * 0.2
+    FieldLabel:
+        id: value
+        font_size: root.value_size
+        halign: 'center'            
+    AnchorLayout:
+        anchor_x: 'center'
+        anchor_y: 'bottom'
+        AutoShrinkFieldLabel:
+            size_hint_y: 0.5
+            id: title
+            shorten: False
+            font_size: root.title_size
+            halign: 'center'    
+    """)
 
     value = NumericProperty(0)
     color = ListProperty([1, 1, 1, 1])

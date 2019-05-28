@@ -33,12 +33,15 @@ from utils import kvFind, kvquery, dist
 from functools import partial
 from kivy.app import Builder
 from kivy.logger import Logger
-from autosportlabs.racecapture.settings.prefs import Range
 from autosportlabs.racecapture.views.channels.channelselectview import ChannelSelectDialog
-from autosportlabs.racecapture.views.channels.channelcustomizationview import ChannelCustomizationView
+from autosportlabs.racecapture.views.alerts.alerteditor import AlertRulesView
+from autosportlabs.racecapture.alerts.alertrules import AlertRule, AlertRuleCollection
+from autosportlabs.racecapture.alerts.alertactions import ColorAlertAction, PopupAlertAction, ShiftLightAlertAction, LedAlertAction
+
 from autosportlabs.racecapture.views.popup.centeredbubble import CenteredBubble
 from autosportlabs.racecapture.data.channels import *
 from autosportlabs.racecapture.views.util.viewutils import format_laptime
+from kivy.core.window import Window
 
 DEFAULT_NORMAL_COLOR = [1.0, 1.0 , 1.0, 1.0]
 
@@ -73,8 +76,10 @@ class Gauge(AnchorLayout):
     title_size = NumericProperty(0)
     title = StringProperty('')
     data_bus = ObjectProperty(None)
+    dashboard_state = ObjectProperty(None)
     title_color = ObjectProperty(DEFAULT_NORMAL_COLOR)
     normal_color = ObjectProperty(DEFAULT_NORMAL_COLOR)
+    visible = BooleanProperty(True)
 
     def __init__(self, **kwargs):
         super(Gauge, self).__init__(**kwargs)
@@ -116,12 +121,6 @@ class Gauge(AnchorLayout):
     def on_channel_meta(self, channel_metas):
         pass
 
-    def on_hide(self):
-        pass
-
-    def on_show(self):
-        pass
-
 class SingleChannelGauge(Gauge):
     _valueView = None
     channel = StringProperty(None, allownone=True)
@@ -157,19 +156,12 @@ class SingleChannelGauge(Gauge):
             self._update_display(channel_meta)
             self.update_title(channel, channel_meta)
 
-    def update_channel_ranges(self):
-        pass
-
     def _update_gauge_meta(self):
-        try:
-            if self.settings:
-                channel_meta = self.settings.runtimeChannels.channels.get(self.channel)
-                self._update_display(channel_meta)
-                self.update_title(self.channel, channel_meta)
-                self._update_channel_binding()
-                self.update_channel_ranges()
-        except Exception as e:
-            Logger.error('Gauge: Error setting channel {}: {}'.format(self.channel, str(e)))
+        if self.settings:
+            channel_meta = self.settings.runtimeChannels.channels.get(self.channel)
+            self._update_display(channel_meta)
+            self.update_title(self.channel, channel_meta)
+            self._update_channel_binding()
 
     def on_settings(self, instance, value):
         # Do I have an id so I can track my settings?
@@ -217,21 +209,18 @@ class SingleChannelGauge(Gauge):
         self._update_gauge_meta()
 
     def _update_display(self, channel_meta):
-        try:
-            if channel_meta:
-                self.min = channel_meta.min
-                self.max = channel_meta.max
-                self.precision = channel_meta.precision
-                self.type = channel_meta.type if channel_meta.type is not CHANNEL_TYPE_UNKNOWN else self.type
-            else:
-                self.min = DEFAULT_MIN
-                self.max = DEFAULT_MAX
-                self.precision = DEFAULT_PRECISION
-                self.value = DEFAULT_VALUE
-                self.type = DEFAULT_TYPE
-            self.update_value_format()
-        except Exception as e:
-            Logger.error('Gauge: Failed to update gauge min/max ' + str(e))
+        if channel_meta:
+            self.min = channel_meta.min
+            self.max = channel_meta.max
+            self.precision = channel_meta.precision
+            self.type = channel_meta.type if channel_meta.type is not CHANNEL_TYPE_UNKNOWN else self.type
+        else:
+            self.min = DEFAULT_MIN
+            self.max = DEFAULT_MAX
+            self.precision = DEFAULT_PRECISION
+            self.value = DEFAULT_VALUE
+            self.type = DEFAULT_TYPE
+        self.update_value_format()
 
     def _update_channel_binding(self):
         dataBus = self.data_bus
@@ -241,13 +230,12 @@ class SingleChannelGauge(Gauge):
             dataBus.addMetaListener(self.on_channel_meta)
 
     def setValue(self, value):
-        self.value = value
+        if self.visible is True:
+            self.value = value
 
 class CustomizableGauge(ButtonBehavior, SingleChannelGauge):
     _popup = None
     _customizeGaugeBubble = None
-    warning = ObjectProperty(Range())
-    alert = ObjectProperty(Range())
     min = NumericProperty(DEFAULT_MIN)
     max = NumericProperty(DEFAULT_MAX)
     _dismiss_customization_popup_trigger = None
@@ -266,18 +254,6 @@ class CustomizableGauge(ButtonBehavior, SingleChannelGauge):
         except:
             pass
 
-    def _get_warn_prefs_key(self, channel):
-        return '{}.warn'.format(self.channel)
-
-    def _get_alert_prefs_key(self, channel):
-        return '{}.alert'.format(self.channel)
-
-    def update_channel_ranges(self):
-        channel = self.channel
-        user_prefs = self.settings.userPrefs
-        self.warning = user_prefs.get_range_alert(self._get_warn_prefs_key(channel), self.warning)
-        self.alert = user_prefs.get_range_alert(self._get_alert_prefs_key(channel), self.alert)
-
     def removeChannel(self):
         self._remove_customization_bubble()
         channel = self.channel
@@ -295,13 +271,12 @@ class CustomizableGauge(ButtonBehavior, SingleChannelGauge):
         self.showChannelSelectDialog()
 
     def select_alert_color(self):
-        value = self.value
-        color = self.normal_color
-        if self.alert and self.alert.is_in_range(value):
-            color = self.alert.color
-        elif self.warning and self.warning.is_in_range(value):
-            color = self.warning.color
-        return color
+        ds = self.dashboard_state
+        if ds is None:
+            return self.normal_color
+
+        color = ds.get_gauge_color(self.channel)
+        return self.normal_color if color is None else color.color_rgb
 
     def update_colors(self):
         view = self.valueView
@@ -319,23 +294,26 @@ class CustomizableGauge(ButtonBehavior, SingleChannelGauge):
         self._popup = popup
         self._dismiss_customization_popup_trigger()
 
-    def on_channel_customization_close(self, instance, warn_range, alert_range, *args):
-        try:
-            self.warning = warn_range
-            self.alert = alert_range
-        except Exception as e:
-            Logger.error("Gauge: Error customizing channel: " + str(e))
-        self._dismiss_popup()
-
     def showChannelConfigDialog(self):
-        content = ChannelCustomizationView(settings=self.settings, channel=self.channel)
-        content.bind(on_channel_customization_close=self.on_channel_customization_close)
 
-        popup = Popup(title='Customize {}'.format(self.channel), content=content, size_hint=(0.6, 0.8))
-        popup.bind(on_dismiss=self.popup_dismissed)
+        def popup_dismissed(instance):
+            self.settings.userPrefs.set_alertrules(self.channel, alertrules)
+            self.dashboard_state.clear_channel_states(self.channel)
+
+        alertrules = self.settings.userPrefs.get_alertrules(self.channel)
+
+        content = AlertRulesView(alertrules, channel=self.channel)
+        content.min_value = self.min
+        content.max_value = self.max
+        content.precision = self.precision
+
+        popup = Popup(title='Customize {}'.format(self.channel),
+                      content=content,
+                      size=(min(Window.width, dp(700)), min(Window.height, dp(400))),
+                      size_hint=(None, None))
+        popup.bind(on_dismiss=popup_dismissed)
+        content.bind(title=lambda i, t: setattr(popup, 'title', t))
         popup.open()
-        self._popup = popup
-        self._dismiss_customization_popup_trigger()
 
     def channel_selected(self, instance, value):
         if self.channel:

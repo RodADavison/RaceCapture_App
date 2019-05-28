@@ -30,70 +30,7 @@ from os import path
 from os.path import dirname, expanduser, sep
 from utils import is_android, is_ios, is_mobile_platform
 from copy import copy
-
-class Range(EventDispatcher):
-    '''
-    Represents a object to manage ranges to facilitate warning / alert functions
-    '''
-    DEFAULT_WARN_COLOR = [1.0, 0.84, 0.0, 1.0]
-    DEFAULT_ALERT_COLOR = [1.0, 0.0, 0.0, 1.0]
-    max = NumericProperty(None)
-    min = NumericProperty(None)
-    color = ListProperty([1.0, 1.0, 1.0, 1.0])
-
-    def __init__(self, minimum=None, maximum=None, **kwargs):
-        self.min = minimum
-        self.max = maximum
-        self.color = kwargs.get('color', self.color)
-
-    def is_in_range(self, value):
-        '''
-        Query if value is in range
-        :param value value to compare
-        :type float
-        :return bool if value is in range
-        '''
-        min = self.min
-        max = self.max
-        return (min is not None and max is not None) and self.min <= value <= self.max
-
-    def to_json(self):
-        '''
-        Serialize to a json string
-        :return string 
-        '''
-        return json.dumps(self.to_dict())
-
-    def to_dict(self):
-        '''
-        Get dictionary representation of object
-        :return dict
-        '''
-        return {'min': self.min,
-                'max': self.max,
-                'color': self.color
-                }
-
-    @staticmethod
-    def from_json(range_json):
-        '''
-        Factory method to create an instance from JSON
-        :param range_json JSON string
-        :type range_json string
-        :return Range object
-        '''
-        range_dict = json.loads(range_json)
-        return Range.from_dict(range_dict)
-
-    @staticmethod
-    def from_dict(range_dict):
-        '''
-        Factory method to create an instance from a dict
-        :param range_dict dict representing Range object
-        :type range_dict dict
-        :return Range object
-        '''
-        return Range(minimum=range_dict['min'], maximum=range_dict['max'], color=range_dict['color'])
+from autosportlabs.racecapture.alerts.alertrules import AlertRuleCollection
 
 class UserPrefs(EventDispatcher):
     '''
@@ -102,7 +39,8 @@ class UserPrefs(EventDispatcher):
     DEFAULT_DASHBOARD_SCREENS = ['5x_gauge_view', 'laptime_view', 'tach_view', 'rawchannel_view']
     DEFAULT_PREFS_DICT = {'range_alerts': {},
                           'gauge_settings':{},
-                          'screens':DEFAULT_DASHBOARD_SCREENS}
+                          'screens':DEFAULT_DASHBOARD_SCREENS,
+                          'alerts': {}}
 
     DEFAULT_ANALYSIS_CHANNELS = ['Speed']
 
@@ -114,7 +52,6 @@ class UserPrefs(EventDispatcher):
         self.data_dir = data_dir
         self.user_files_dir = user_files_dir
         self.prefs_file = path.join(self.data_dir, self.prefs_file_name)
-        self._schedule_save = Clock.create_trigger(self.save, save_timeout)
         self.register_event_type("on_pref_change")
         self.load()
 
@@ -130,7 +67,7 @@ class UserPrefs(EventDispatcher):
         :type object
         '''
         self._prefs_dict["range_alerts"][key] = range_alert
-        self._schedule_save()
+        self.save()
 
     def get_range_alert(self, key, default=None):
         '''
@@ -143,6 +80,25 @@ class UserPrefs(EventDispatcher):
         '''
         return self._prefs_dict["range_alerts"].get(key, default)
 
+
+    def get_alertrules(self, channel):
+        '''
+        Retrieve the alert_rules for the specified channel. If the
+        alertrules do not exist for the specified channel, return an empty
+        default AlertRuleCollection
+        :return AlertRuleCollection
+        '''
+        alertrules = self._prefs_dict['alerts'].get(channel)
+        if alertrules is None:
+            alertrules = AlertRuleCollection(channel, [])
+            self._prefs_dict['alerts'][channel] = alertrules
+
+        return alertrules
+
+    def set_alertrules(self, channel, alertrules):
+        self._prefs_dict['alerts'][channel] = alertrules
+        self.save()
+
     def set_gauge_config(self, gauge_id, config_value):
         '''
         Stores a gauge configuration for the specified gauge_id
@@ -152,7 +108,7 @@ class UserPrefs(EventDispatcher):
         :type config_value string
         '''
         self._prefs_dict["gauge_settings"][gauge_id] = config_value
-        self._schedule_save()
+        self.save()
 
     def get_gauge_config(self, gauge_id):
         '''
@@ -168,7 +124,7 @@ class UserPrefs(EventDispatcher):
 
     def set_dashboard_screens(self, screens):
         self._prefs_dict['screens'] = copy(screens)
-        self._schedule_save()
+        self.save()
 
 # Regular preferences below here
 
@@ -185,7 +141,7 @@ class UserPrefs(EventDispatcher):
         self.set_pref('track_detection', 'last_selected_track_id', track_id)
         self.set_pref('track_detection', 'last_selected_track_timestamp', timestamp)
         self.set_pref('track_detection', 'user_cancelled_location', user_cancelled_location)
-        self._schedule_save()
+        self.save()
 
     @property
     def datastore_location(self):
@@ -249,7 +205,6 @@ class UserPrefs(EventDispatcher):
 
         self.config.adddefaultsection('setup')
         self.config.setdefault('setup', 'setup_enabled', 1)
-        self._schedule_save()
 
     def load(self):
         Logger.info('UserPrefs: Data Dir is: {}'.format(self.data_dir))
@@ -261,10 +216,6 @@ class UserPrefs(EventDispatcher):
                 content = data.read()
                 content_dict = json.loads(content)
 
-                if content_dict.has_key("range_alerts"):
-                    for name, settings in content_dict["range_alerts"].iteritems():
-                        self._prefs_dict["range_alerts"][name] = Range.from_dict(settings)
-
                 if content_dict.has_key("gauge_settings"):
                     for id, channel in content_dict["gauge_settings"].iteritems():
                         self._prefs_dict["gauge_settings"][id] = channel
@@ -272,8 +223,12 @@ class UserPrefs(EventDispatcher):
                 if content_dict.has_key('screens'):
                     self._prefs_dict['screens'] = content_dict['screens']
 
-        except Exception:
-            pass
+                if content_dict.has_key('alerts'):
+                    for channel, alertrules in content_dict['alerts'].iteritems():
+                        self._prefs_dict['alerts'][channel] = AlertRuleCollection.from_dict(alertrules)
+
+        except Exception as e:
+            Logger.error('Error loading preferences, using defaults. {}'.format(e))
 
     def init_pref_section(self, section):
         '''
@@ -408,7 +363,7 @@ class UserPrefs(EventDispatcher):
         '''
         Serialize preferences to json
         '''
-        data = {'range_alerts': {}, 'gauge_settings':{}, 'screens': []}
+        data = {'range_alerts': {}, 'gauge_settings':{}, 'screens': [], 'alerts': {}}
 
         for name, range_alert in self._prefs_dict["range_alerts"].iteritems():
             data["range_alerts"][name] = range_alert.to_dict()
@@ -416,6 +371,9 @@ class UserPrefs(EventDispatcher):
         for id, channel in self._prefs_dict["gauge_settings"].iteritems():
             data["gauge_settings"][id] = channel
 
+        for name, alertrules in self._prefs_dict['alerts'].iteritems():
+            data['alerts'][name] = alertrules.to_dict()
+
         data['screens'] = self._prefs_dict['screens']
 
-        return json.dumps(data)
+        return json.dumps(data, sort_keys=True, indent=2, separators=(',', ': '))

@@ -31,96 +31,10 @@ from kivy.clock import Clock
 from kivy.metrics import sp
 from iconbutton import IconButton
 from autosportlabs.racecapture.theme.color import ColorScheme
+from valuefield import FloatValueField
+from autosportlabs.racecapture.views.util.viewutils import autoformat_number
 
-__all__ = ('alertPopup, confirmPopup, okPopup, editor_popup, progress_popup')
-
-Builder.load_string('''
-<ChoicePopup>:
-    cols:1
-    Label:
-        text: root.text
-    GridLayout:
-        cols: 2
-        size_hint_y: None
-        height: '44sp'
-        spacing: '5sp'
-        Button:
-            text: root.choice1
-            on_release: root.dispatch('on_answer', True)
-        Button:
-            text: root.choice2
-            on_release: root.dispatch('on_answer', False)
-
-<ConfirmPopup>:
-    cols:1
-    Label:
-        text: root.text
-    GridLayout:
-        cols: 2
-        size_hint_y: None
-        height: '44sp'
-        spacing: '5sp'
-        IconButton:
-            text: u'\uf00c'
-            on_press: root.dispatch('on_answer', True)
-        IconButton:
-            text: u'\uf00d'
-            color: ColorScheme.get_primary()            
-            on_release: root.dispatch('on_answer', False)
-            
-<OkPopup>:
-    cols:1
-    Label:
-        text: root.text
-    GridLayout:
-        cols: 2
-        size_hint_y: None
-        height: '44sp'
-        spacing: '5sp'
-        IconButton:
-            text: u'\uf00c'
-            on_press: root.dispatch('on_ok', True)
-            
-            
-<EditorPopup>:
-    id: editor_popup
-    cols:1
-    BoxLayout:
-        id: content
-        size_hint_y: 0.85
-    GridLayout:
-        id: buttons
-        cols: 2
-        size_hint_y: 0.15
-        IconButton:
-            id: ok
-            text: u'\uf00c'
-            on_press: root.dispatch('on_answer', True)
-        IconButton:
-            text: u'\uf00d'
-            color: ColorScheme.get_primary()            
-            on_release: root.dispatch('on_answer', False)
-            
-<ProgressPopup>:
-    cols:1
-    padding: (dp(10), dp(10))
-    Label:
-        text: root.text
-        size_hint_y: 0.4
-    ProgressBar:
-        value: root.progress
-        size_hint_y: 0.6
-    GridLayout:
-        cols: 2
-        size_hint_y: None
-        height: '44sp'
-        spacing: '5sp'
-        IconButton:
-            id: ok_cancel
-            text: u'\uf00d'
-            on_press: root.dispatch('on_ok_cancel', True)
-            color: ColorScheme.get_primary()            
-''')
+__all__ = ('alertPopup, confirmPopup, okPopup, editor_popup, progress_popup, number_editor_popup')
 
 def alertPopup(title, msg):
     popup = Popup(title=title,
@@ -140,6 +54,24 @@ def choicePopup(title, msg, choice1, choice2, answerCallback):
     return popup
 
 class ChoicePopup(GridLayout):
+    Builder.load_string("""
+<ChoicePopup>:
+    cols:1
+    Label:
+        text: root.text
+    GridLayout:
+        cols: 2
+        size_hint_y: None
+        height: '44sp'
+        spacing: '5sp'
+        Button:
+            text: root.choice2
+            on_release: root.dispatch('on_answer', False)
+        Button:
+            text: root.choice1
+            on_release: root.dispatch('on_answer', True)    
+    """)
+
     text = StringProperty()
     choice1 = StringProperty('Yes')
     choice2 = StringProperty('No')
@@ -163,6 +95,24 @@ def confirmPopup(title, msg, answerCallback):
     return popup
 
 class ConfirmPopup(GridLayout):
+    Builder.load_string("""
+<ConfirmPopup>:
+    cols:1
+    Label:
+        text: root.text
+    GridLayout:
+        cols: 2
+        size_hint_y: None
+        height: '44sp'
+        spacing: '5sp'
+        IconButton:
+            text: u'\uf00d'
+            color: ColorScheme.get_primary()            
+            on_release: root.dispatch('on_answer', False)
+        IconButton:
+            text: u'\uf00c'
+            on_press: root.dispatch('on_answer', True)    
+    """)
     text = StringProperty()
 
     def __init__(self, **kwargs):
@@ -196,6 +146,26 @@ def editor_popup(title, content, answerCallback, size_hint=(None, None), size=(d
     return popup
 
 class EditorPopup(GridLayout):
+    Builder.load_string("""
+<EditorPopup>:
+    id: editor_popup
+    cols:1
+    BoxLayout:
+        id: content
+        size_hint_y: 0.85
+    GridLayout:
+        id: buttons
+        cols: 2
+        size_hint_y: 0.15
+        IconButton:
+            text: u'\uf00d'
+            color: ColorScheme.get_primary()            
+            on_release: root.dispatch('on_answer', False)
+        IconButton:
+            id: ok
+            text: u'\uf00c'
+            on_press: root.dispatch('on_answer', True)    
+    """)
     content = ObjectProperty(None)
 
     def __init__(self, hide_ok=False, **kwargs):
@@ -226,6 +196,20 @@ def okPopup(title, msg, answer_callback):
     return popup
 
 class OkPopup(GridLayout):
+    Builder.load_string("""
+<OkPopup>:
+    cols:1
+    Label:
+        text: root.text
+    GridLayout:
+        cols: 2
+        size_hint_y: None
+        height: '44sp'
+        spacing: '5sp'
+        IconButton:
+            text: u'\uf00c'
+            on_press: root.dispatch('on_ok', True)    
+    """)
     text = StringProperty()
 
     def __init__(self, **kwargs):
@@ -247,6 +231,27 @@ def progress_popup(title, msg, answer_callback):
     return popup
 
 class ProgressPopup(GridLayout):
+    Builder.load_string("""
+<ProgressPopup>:
+    cols:1
+    padding: (dp(10), dp(10))
+    Label:
+        text: root.text
+        size_hint_y: 0.4
+    ProgressBar:
+        value: root.progress
+        size_hint_y: 0.6
+    GridLayout:
+        cols: 2
+        size_hint_y: None
+        height: '44sp'
+        spacing: '5sp'
+        IconButton:
+            id: ok_cancel
+            text: u'\uf00d'
+            on_press: root.dispatch('on_ok_cancel', True)
+            color: ColorScheme.get_primary()                
+    """)
     text = StringProperty()
     progress = NumericProperty()
 
@@ -264,3 +269,74 @@ class ProgressPopup(GridLayout):
         if value == 100:
             self.ids.ok_cancel.color = ColorScheme.get_light_primary_text()
             self.ids.ok_cancel.text = u'\uf00c'
+
+class NumberEditorPopup(GridLayout):
+    Builder.load_string("""
+<NumberEditorPopup>:
+    cols:1
+    padding: (dp(10), dp(10))
+    FieldLabel:
+        text: root.msg
+        size_hint_y: 0.45
+        id: msg
+    FloatValueField:
+        text: root.formatted_value
+        on_text: root._on_value_updated()
+        size_hint_y: 0.3
+        id: value
+    GridLayout:
+        id: buttons
+        cols: 2
+        size_hint_y: 0.25
+        IconButton:
+            text: u'\uf00d'
+            color: ColorScheme.get_primary()            
+            on_release: root.dispatch('on_ok_cancel', False)
+        IconButton:
+            id: ok
+            text: u'\uf00c'
+            on_press: root.dispatch('on_ok_cancel', True)    
+    """)
+    msg = StringProperty('')
+    value = NumericProperty(0)
+    formatted_value = StringProperty('0')
+    min_value = NumericProperty(None, allownone=True)
+    max_value = NumericProperty(None, allownone=True)
+
+    def __init__(self, **kwargs):
+        self.register_event_type('on_ok_cancel')
+        super(NumberEditorPopup, self).__init__(**kwargs)
+
+    def on_value(self, instance, value):
+        self.formatted_value = autoformat_number(value)
+
+    def on_ok_cancel(self, *args):
+        pass
+
+    def _on_value_updated(self, *args):
+        value_text = self.ids.value.text
+        value = 0 if len(value_text) == 0 else float(value_text)
+        min_value = self.min_value
+        max_value = self.max_value
+        is_valid = (min_value is None or value >= min_value) and (max_value is None or value <= max_value)
+        self.value = value
+
+        self.ids.value.background_color = ColorScheme.get_normal_background() if is_valid else ColorScheme.get_error_background()
+        self.ids.msg.text = self.msg if is_valid else 'Valid range is {} - {}'.format(autoformat_number(self.min_value), autoformat_number(self.max_value))
+        self.ids.ok.disabled = not is_valid
+        
+def number_editor_popup(title, msg, value, min_value, max_value, answer_callback):
+    content = NumberEditorPopup(msg=msg,
+                                value=value,
+                                min_value=min_value,
+                                max_value=max_value)
+    content.bind(on_ok_cancel=answer_callback)
+    popup = Popup(title=title,
+                    content=content,
+                    size_hint=(None, None),
+                    size=(dp(400), dp(300)),
+                    auto_dismiss=False)
+    popup.open()
+    return popup
+        
+

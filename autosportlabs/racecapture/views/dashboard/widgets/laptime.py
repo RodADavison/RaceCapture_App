@@ -68,15 +68,12 @@ class CurrentLaptime(Gauge):
     anchor_x: 'center'
     anchor_y: 'center'
     value_size: self.height
-    FieldLabel:
+    AutoShrinkFieldLabel:
         text: root.NULL_LAP_TIME
         id: value
         font_size: root.font_size
         shorten: False
         max_lines: 1
-        on_texture: root._change_font_size()
-                
-        
     """)
 
     _FLASH_INTERVAL = 0.25
@@ -96,18 +93,6 @@ class CurrentLaptime(Gauge):
     valign = StringProperty(None)
     value = ObjectProperty(None)
     font_size = NumericProperty()
-
-    def _change_font_size(self, *args):
-        w = self.ids.value
-        texture_width = w.texture_size[0]
-        try:
-            if texture_width > w.width:
-                w.font_size -= 1
-                Clock.schedule_once(self._change_font_size, 0.1)
-                return
-
-        except Exception as e:
-            Logger.warn('Failed to change font size: {}'.format(e))
 
     def on_halign(self, instance, value):
         self.valueView.halign = value

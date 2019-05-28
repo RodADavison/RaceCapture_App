@@ -62,7 +62,7 @@ class AndroidComms(object):
 
     def open(self):
         Logger.info('AndroidComms: Opening connection ' + str(self.device))
-        self._bt_conn.open(self.device)
+        self._bt_conn.openConnection(self.device)
         Logger.info('AndroidComms: after open')
 
     def keep_alive(self):
@@ -70,7 +70,7 @@ class AndroidComms(object):
 
     def close(self):
         Logger.info('AndroidComms: close')
-        self._bt_conn.close()
+        self._bt_conn.closeConnection()
 
     def read_message(self):
         return self._bt_conn.readLine()

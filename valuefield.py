@@ -26,7 +26,7 @@ from kivy.app import Builder
 
 VALUE_FIELD_KV = """
 <ValueField>:
-    font_size: self.height * 0.5
+    font_size: self.height * 0.6
     multiline: False
     write_tab: False
 """

@@ -37,7 +37,7 @@ class DashboardScreen(AnchorLayout):
         """
         gauges = list(kvFindClass(self, Gauge))
         for gauge in gauges:
-            gauge.on_show()
+            gauge.visible = True
 
     def on_exit(self):
         """
@@ -45,5 +45,5 @@ class DashboardScreen(AnchorLayout):
         """
         gauges = list(kvFindClass(self, Gauge))
         for gauge in gauges:
-            gauge.on_hide()
-        
+            gauge.visible = False
+

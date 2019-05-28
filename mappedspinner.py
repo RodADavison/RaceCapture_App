@@ -23,8 +23,10 @@ kivy.require('1.10.0')
 
 from kivy.uix.spinner import Spinner
 from kivy import Logger
+from kivy.properties import ObjectProperty
 
 class MappedSpinner(Spinner):
+    value_map = ObjectProperty()
     def __init__(self, **kwargs):
         self.valueMappings = {}
         self.keyMappings = {}
@@ -33,7 +35,10 @@ class MappedSpinner(Spinner):
         super(MappedSpinner, self).__init__(**kwargs)
         self.register_event_type('on_value')
 
-    def setValueMap(self, valueMap, defaultValue, sort_key=None):
+    def on_value_map(self, instance, value):
+        self.setValueMap(value)
+        
+    def setValueMap(self, valueMap, defaultValue=None, sort_key=None):
         """
         Sets the displayed and actual values for the spinner
         :param valueMap: Dict of value: Display Value items to display
@@ -45,11 +50,17 @@ class MappedSpinner(Spinner):
         keyMappings = {}
         values = []
         sortedValues = sorted(valueMap, key=sort_key)
-
+        
         for item in sortedValues:
             values.append(valueMap[item])
             keyMappings[valueMap[item]] = item
 
+        try:
+            if defaultValue is None:
+                defaultValue = values[0]
+        except IndexError:
+            defaultValue = ''
+            
         self.defaultValue = defaultValue
         self.valueMappings = valueMap
         self.keyMappings = keyMappings

@@ -2,7 +2,12 @@ import kivy
 kivy.require('1.10.0')
 from kivy.uix.boxlayout import BoxLayout
 from kivy.app import Builder
+from kivy.uix.button import ButtonBehavior
+from kivy.uix.anchorlayout import AnchorLayout
 from autosportlabs.racecapture.theme.color import ColorScheme
+
+class ClickAnchorLayout(ButtonBehavior, AnchorLayout):
+    pass
 
 class SectionBoxLayout(BoxLayout):
     """

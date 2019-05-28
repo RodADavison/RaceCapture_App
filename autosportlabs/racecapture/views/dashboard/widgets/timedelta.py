@@ -63,6 +63,7 @@ TIME_DELTA_GRAPH_KV = """
                     radius: [self.height * .2,self.height * .2,self.height * .2,self.height * .2]
                     size: self.size
             size_hint_x: 0.3
+            size_hint_y: 0.8
             id: delta_value
             text: root.formatted_delta
             font_size: self.height

@@ -94,12 +94,13 @@ class HeatmapView(DashboardScreen):
     Builder.load_string(HEATMAP_VIEW_KV)
     _POPUP_SIZE_HINT = (0.75, 0.8)
 
-    def __init__(self, databus, settings, track_manager, status_pump, **kwargs):
+    def __init__(self, databus, settings, dashboard_state, track_manager, status_pump, **kwargs):
         super(HeatmapView, self).__init__(**kwargs)
         self._initialized = False
         self.register_event_type('on_tracks_updated')
         self._databus = databus
         self._settings = settings
+        self._dashboard_state = dashboard_state
         self._track_manager = track_manager
         status_pump.add_listener(self._update_track_status)
         self._current_track_id = None
@@ -141,6 +142,7 @@ class HeatmapView(DashboardScreen):
         for gauge in gauges:
             gauge.settings = settings
             gauge.data_bus = data_bus
+            gauge.dashboard_state = self._dashboard_state
         self._initialized = True
 
     def on_tracks_updated(self, trackmanager):

@@ -22,7 +22,6 @@ import unittest
 import os
 import time
 from autosportlabs.racecapture.settings.prefs import UserPrefs
-from autosportlabs.racecapture.settings.prefs import Range
 
 class UserPrefsTest(unittest.TestCase):
     data_dir = os.path.dirname(os.path.realpath(__file__))
@@ -33,18 +32,9 @@ class UserPrefsTest(unittest.TestCase):
 
     def tearDown(self):
         try:
-            os.remove(self.data_dir+'/'+self.userprefs.prefs_file_name)
+            os.remove(self.data_dir + '/' + self.userprefs.prefs_file_name)
         except OSError:
             pass
-
-    def test_set_get_range_alert(self):
-        test_range = Range(1, 10)
-        self.userprefs.set_range_alert('Coolant', test_range)
-
-        fetched_range = self.userprefs.get_range_alert('Coolant')
-
-        self.assertEquals(test_range.min, fetched_range.min,
-                          "Saved range and fetched range do not match")
 
     def test_save_prefs(self):
         coolant_range = Range(1, 10, color=[2, 2, 2, 2])
@@ -54,12 +44,12 @@ class UserPrefsTest(unittest.TestCase):
 
         self.userprefs.save()
 
-        #Did it create the file in the right location?
-        self.assertTrue(os.path.isfile(self.data_dir+'/'+self.userprefs.prefs_file_name))
+        # Did it create the file in the right location?
+        self.assertTrue(os.path.isfile(self.data_dir + '/' + self.userprefs.prefs_file_name))
 
         newprefs = UserPrefs(self.data_dir, save_timeout=1000)
 
-        #newprefs should load the prefs file
+        # newprefs should load the prefs file
         new_coolant = newprefs.get_range_alert('Coolant')
         new_rpm = newprefs.get_range_alert('RPM')
 
@@ -83,8 +73,8 @@ class UserPrefsTest(unittest.TestCase):
                           new_rpm.color,
                           "Range color not saved and loaded from prefs file")
 
-    #Not running this test as Kivy's Clock.create_trigger doesn't execute
-    #outside of the Kivy env
+    # Not running this test as Kivy's Clock.create_trigger doesn't execute
+    # outside of the Kivy env
     def save_timer(self):
         prefs = UserPrefs(self.data_dir, save_timeout=1)
         rpm_range = Range(1000, 8000)

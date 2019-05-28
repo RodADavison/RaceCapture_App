@@ -29,7 +29,7 @@ from kivy.uix.label import Label
 from kivy.properties import ObjectProperty, StringProperty, NumericProperty
 from datetime import timedelta
 from utils import *
-from fieldlabel import FieldLabel
+from fieldlabel import AutoShrinkFieldLabel
 from kivy.logger import LoggerHistory, Logger
 from autosportlabs.racecapture.theme.color import ColorScheme
 from autosportlabs.uix.toast.kivytoast import toast
@@ -40,7 +40,7 @@ STATUS_KV_FILE = 'autosportlabs/racecapture/views/status/statusview.kv'
 RAW_STATUS_BGCOLOR_1 = ColorScheme.get_background()
 RAW_STATUS_BGCOLOR_2 = ColorScheme.get_dark_background()
 
-class StatusLabel(FieldLabel):
+class StatusLabel(AutoShrinkFieldLabel):
     backgroundColor = ObjectProperty(RAW_STATUS_BGCOLOR_1)
 
 class StatusTitle(StatusLabel):
@@ -79,11 +79,11 @@ class StatusView(Screen):
     # Used for building the left side menu
     _menu_keys = {
         "app": "Application",
-        "system": "RaceCapture",
+        "system": "Device",
         "GPS": "GPS",
         "cell": "Cellular",
         "bt": "Bluetooth",
-        "logging": "Logger",
+        "logging": "Logging",
         "track": "Track",
         "telemetry": "Telemetry",
         "wifi": "WiFi",
